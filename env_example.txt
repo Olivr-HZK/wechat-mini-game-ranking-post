@@ -1,0 +1,32 @@
+# OpenRouter API配置
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+# 视频分析模型：google/gemini-pro-2.0 (Gemini 2.5 Pro) 或 openai/gpt-4o
+VIDEO_ANALYSIS_MODEL=google/gemini-pro-2.0
+
+# 飞书机器人配置
+FEISHU_WEBHOOK_URL=your_feishu_webhook_url_here
+# 飞书应用凭证（可选，用于上传图片等功能）
+FEISHU_APP_ID=your_feishu_app_id_here
+FEISHU_APP_SECRET=your_feishu_app_secret_here
+
+# 抖音搜索API配置（TikHub）
+DOUYIN_API_TOKEN=
+# 抖音下载API配置（可选）
+# 如果使用专门的下载API，设置为true并配置端点
+USE_DOWNLOAD_API=false
+DOUYIN_DOWNLOAD_ENDPOINT=/api/v1/douyin/video/download
+
+# 抖音最高画质API配置（付费API，0.005$一次）
+# 当普通URL下载失败时，是否使用付费的最高画质API作为备用方案
+USE_HIGH_QUALITY_API_FALLBACK=true
+
+# 工作流配置
+MAX_GAMES_TO_PROCESS=5
+
+# API请求配置（可选）
+# 请求间隔（秒），避免频率过高导致429错误
+API_REQUEST_DELAY=1.0
+# 最大重试次数（针对502等临时错误）
+API_MAX_RETRIES=3
+# 重试延迟（秒）
+API_RETRY_DELAY=2.0
