@@ -192,7 +192,8 @@ class VideoAnalyzer:
         # 优先从数据库获取Google Drive URL，如果没有则尝试其他URL
         if not video_url and self.use_database and self.db and game_name:
             # 从数据库获取视频信息
-            videos = self.db.get_videos_by_game(game_name)
+            game = self.db.get_game(game_name)
+            videos = [game] if game else []
             if videos:
                 video_info = videos[0]
                 # 优先级：Google Drive URL > 原视频URL > 普通video_url
@@ -222,8 +223,8 @@ class VideoAnalyzer:
                 use_url = False
             
             # 构建API请求
-            # 要求返回详细的、结构化的JSON格式分析
-            prompt = f"""请仔细观察这个游戏视频，进行详细的玩法分析。
+            # 要求返回结构化但更加精炼的JSON格式分析
+            prompt = f"""请仔细观察这个游戏视频，进行玩法分析。
 
 游戏名称：{game_name}
 游戏类型：{game_info.get('游戏类型', '未知') if game_info else '未知'}
@@ -231,24 +232,51 @@ class VideoAnalyzer:
 请仔细观看视频内容，然后以JSON格式返回分析结果，格式如下：
 {{
   "core_gameplay": {{
-    "mechanism": "游戏的核心玩法机制（详细描述，至少300字）",
-    "operation": "具体的操作方式和交互流程（详细描述，至少200字）",
-    "rules": "游戏规则和胜利条件（详细描述，至少150字）",
-    "features": "游戏的特色功能和亮点（详细描述，至少200字）"
+    "mechanism": "用一段话整体说明核心玩法机制 + 操作方式 + 基本规则 + 主要特点（合并在一起）",
+    "operation": "可选的简短补充（1-2 句），没有补充可留空字符串",
+    "rules": "可选的简短补充（1-2 句），没有补充可留空字符串",
+    "features": "可选的简短补充（1-2 句），没有补充可留空字符串"
   }},
   "attraction": {{
-    "points": "游戏的吸引点分析（详细描述为什么玩家会喜欢，至少300字）",
-    "target_audience": "目标用户群体分析（至少150字）",
-    "retention_factors": "用户留存因素分析（至少200字）"
+    "points": "用一段话整合说明：游戏的主要吸引点 + 适合的目标用户类型 + 关键留存因素",
+    "target_audience": "可选的简短人群标签或一句话总结（可留空字符串）",
+    "retention_factors": "可选的简短留存要点（可留空字符串）"
   }}
 }}
 
-要求：
-1. 必须仔细观察视频中的实际游戏画面和操作
-2. 分析要详细、具体，不要泛泛而谈
-3. 直接返回JSON格式，不要有任何前缀说明文字（如"好的"、"以下是"等）
-4. 确保JSON格式正确，可以被解析
-5. 所有描述都要基于视频中的实际内容"""
+重要要求：
+1. **玩法描述策略（仍然保持类比/创新逻辑）**：
+   - 如果该游戏的玩法与市面上主流热门游戏（如王者荣耀、和平精英、原神、英雄联盟、和平精英、我的世界、植物大战僵尸等）类似，请采用类比方式：
+     * 先说明"玩法类似[知名游戏名称]"，例如"玩法类似英雄联盟手游版"或"玩法类似王者荣耀"
+     * 然后用极简洁的方式说明核心玩法机制和操作方式（总字数控制在 120-180 字）
+     * 再补一句概括性的差异和本游戏的独特之处（约 50-80 字）
+   - 如果是一种全新的、创新的玩法：整体描述也尽量收敛在 180-250 字以内，突出最核心的 2-3 个机制即可
+   - 如果玩法是经典类型的变体（如消除类、跑酷类、塔防类等），先说明大类，再点出 2-3 个最有差异化的点
+
+2. **描述长度控制**：
+   - **core_gameplay.mechanism**：1 段整体文字，推荐 150-220 字，覆盖机制 + 操作 + 规则 + 特点，不要拆得太细、不要赘述
+   - **core_gameplay.operation / rules / features**：如果没有额外信息，可以留空字符串 `""`，有补充时每个字段不超过 50 字
+   - **attraction.points**：1 段整体文字，推荐 150-220 字，同时说明：为什么好玩 + 适合什么玩家 + 主要留存点
+   - **attraction.target_audience / retention_factors**：可以是非常精简的标签或一句话（不超过 40 字），不强制必须填写
+
+3. **必须仔细观察视频中的实际游戏画面和操作**
+
+4. **直接返回JSON格式，不要有任何前缀说明文字（如"好的"、"以下是"等）**
+
+5. **确保JSON格式正确，可以被解析**
+
+6. **所有描述都要基于视频中的实际内容，不要编造信息**
+
+示例格式（玩法类似知名游戏时，注意结构精简）：
+{{
+  "core_gameplay": {{
+    "mechanism": "玩法整体类似英雄联盟手游版，为 5v5 MOBA 推塔对战。玩家选择不同定位的英雄，在三路地图中通过击杀小兵、野怪和敌方英雄获取经济与经验，购买装备强化自己，最终摧毁敌方基地水晶获胜。本作节奏更快、单局时长更短，操作界面更简洁，对走位与技能释放做了自动辅助，更偏向轻度玩家。",
+    "operation": "",
+    "rules": "",
+    "features": ""
+  }},
+  ...
+}}"""
             
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
@@ -471,7 +499,8 @@ class VideoAnalyzer:
                 
                 # 保存到数据库（如果使用数据库）
                 if self.use_database and self.db:
-                    videos = self.db.get_videos_by_game(game_name)
+                    game = self.db.get_game(game_name)
+                    videos = [game] if game else []
                     if videos:
                         video_info = videos[0]
                         video_info['gdrive_url'] = public_url

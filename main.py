@@ -5,7 +5,7 @@
 import sys
 import os
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 from modules.rank_extractor import RankExtractor
 from modules.video_searcher import VideoSearcher
 from modules.video_analyzer import VideoAnalyzer
@@ -226,28 +226,440 @@ class GameAnalysisWorkflow:
             print(f"    上传图片到飞书时出错：{str(e)}")
             return None
     
-    def run(self, max_games: int = None):
+    def step0_scrape_rankings(self) -> bool:
         """
-        运行完整工作流
+        步骤0：爬取游戏排行榜
+        
+        Returns:
+            是否成功
+        """
+        print("【步骤0】爬取游戏排行榜...")
+        try:
+            from modules.DEScraper import scrape
+            scrape()
+            print("✓ 排行榜爬取完成")
+            print(f"  中间产物已保存到：data/game_rankings.csv\n")
+            return True
+        except Exception as e:
+            print(f"⚠ 爬取失败：{str(e)}\n")
+            return False
+    
+    def step1_extract_rankings(self, max_games: int = None) -> Optional[List[Dict]]:
+        """
+        步骤1：提取游戏排行榜
+        
+        Args:
+            max_games: 最大处理游戏数量，如果为None则处理所有游戏
+        
+        Returns:
+            游戏列表，如果失败返回None
+        """
+        print("【步骤1】提取游戏排行榜...")
+        # 如果max_games为None，处理所有游戏（不限制）
+        if max_games is None:
+            games = self.rank_extractor.get_top_games(top_n=None)  # None表示处理所有
+        else:
+            games = self.rank_extractor.get_top_games(top_n=max_games)
+        
+        if not games:
+            print("错误：未能提取到游戏信息\n")
+            return None
+        
+        print(f"成功提取 {len(games)} 个游戏")
+        
+        # 保存中间产物
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = f"data/step1_rankings_{timestamp}.json"
+        try:
+            os.makedirs("data", exist_ok=True)
+            import json
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(games, f, ensure_ascii=False, indent=2)
+            print(f"  中间产物已保存到：{output_file}\n")
+        except Exception as e:
+            print(f"  保存中间产物失败：{str(e)}\n")
+        
+        return games
+    
+    def step2_search_videos(self, games: List[Dict]) -> List[Dict]:
+        """
+        步骤2：搜索并下载视频
+        
+        Args:
+            games: 游戏列表
+        
+        Returns:
+            视频信息列表
+        """
+        print("【步骤2】搜索并下载视频...")
+        video_results = []
+        
+        for idx, game in enumerate(games, 1):
+            game_name = game.get('游戏名称', '未知游戏')
+            game_type = game.get('游戏类型')  # 保存原始的游戏类型信息
+            print(f"\n处理游戏 {idx}/{len(games)}: {game_name}")
+            
+            # 检查数据库中是否已有视频
+            video_info = None
+            video_path = None
+            video_url = None
+            aweme_id = None
+            
+            if self.video_searcher.use_database and self.video_searcher.db:
+                db_game = self.video_searcher.db.get_game(game_name)
+                videos = [db_game] if db_game else []
+                if videos:
+                    video_info = videos[0]
+                    aweme_id = video_info.get("aweme_id")
+                    
+                    if video_info.get("downloaded") == 1 and video_info.get("local_path"):
+                        video_path = video_info.get("local_path")
+                        if os.path.exists(video_path):
+                            print(f"  ✓ 从数据库找到已下载的视频：{video_path}")
+                        else:
+                            video_path = None
+                    
+                    gdrive_url = video_info.get("gdrive_url")
+                    if gdrive_url:
+                        video_url = gdrive_url
+                        print(f"  ✓ 从数据库找到Google Drive URL：{video_url[:50]}...")
+            
+            # 如果数据库中没有，进行搜索和下载
+            if not video_path or not video_url:
+                if not video_path:
+                    print(f"  数据库中未找到已下载的视频，开始搜索...")
+                    video_path = self.video_searcher.search_and_download(
+                        game_name=game_name,
+                        game_type=game_type  # 使用保存的原始游戏类型
+                    )
+                
+                # 重新从数据库获取最新信息
+                if self.video_searcher.use_database and self.video_searcher.db:
+                    game = self.video_searcher.db.get_game(game_name)
+                    videos = [game] if game else []
+                    if videos:
+                        video_info = videos[0]
+                        aweme_id = video_info.get("aweme_id")
+                        
+                        if not video_url:
+                            gdrive_url = video_info.get("gdrive_url")
+                            if gdrive_url:
+                                video_url = gdrive_url
+                                print(f"  ✓ 从数据库获取Google Drive URL：{video_url[:50]}...")
+                            elif video_path and os.path.exists(video_path):
+                                print(f"  尝试上传本地视频到Google Drive...")
+                                gdrive_url, gdrive_file_id = self.video_searcher._upload_to_gdrive(
+                                    video_path, game_name, aweme_id
+                                )
+                                if gdrive_url:
+                                    video_url = gdrive_url
+                                    print(f"  ✓ 已上传并获取Google Drive URL：{video_url[:50]}...")
+            
+            # 获取完整的游戏信息（优先使用原始CSV数据，补充数据库中的视频信息）
+            if video_info:
+                # 使用原始的game信息（来自CSV），确保包含排名、公司等信息
+                game_info = game.copy() if isinstance(game, dict) else {}
+                # 如果数据库中有视频信息，合并进去
+                if video_info:
+                    game_info.update({
+                        "aweme_id": video_info.get("aweme_id"),
+                        "gdrive_url": video_info.get("gdrive_url"),
+                        "local_path": video_info.get("local_path")
+                    })
+                
+                video_results.append({
+                    "game_name": game_name,
+                    "game_info": game_info,  # 保存完整的游戏信息（包括开发公司、排名变化等）
+                    "video_info": video_info,
+                    "video_path": video_path,
+                    "video_url": video_url,
+                    "gdrive_url": video_url,  # 明确保存gdrive_url
+                    "aweme_id": aweme_id
+                })
+        
+        # 保存中间产物
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = f"data/step2_videos_{timestamp}.json"
+        try:
+            os.makedirs("data", exist_ok=True)
+            import json
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(video_results, f, ensure_ascii=False, indent=2)
+            print(f"\n✓ 视频搜索完成")
+            print(f"  中间产物已保存到：{output_file}\n")
+        except Exception as e:
+            print(f"\n✓ 视频搜索完成")
+            print(f"  保存中间产物失败：{str(e)}\n")
+        
+        return video_results
+    
+    def step3_analyze_videos(self, video_results: List[Dict]) -> List[Dict]:
+        """
+        步骤3：分析视频
+        
+        Args:
+            video_results: 视频信息列表
+        
+        Returns:
+            分析结果列表
+        """
+        print("【步骤3】分析视频...")
+        analyses = []
+        
+        for idx, video_result in enumerate(video_results, 1):
+            game_name = video_result.get("game_name", "未知游戏")
+            video_url = video_result.get("video_url")
+            video_path = video_result.get("video_path")
+            video_info = video_result.get("video_info", {})
+            
+            print(f"\n处理游戏 {idx}/{len(video_results)}: {game_name}")
+            
+            if not video_url:
+                print(f"  错误：无法获取Google Drive URL，跳过分析")
+                continue
+            
+            if not video_url.startswith("https://drive.google.com"):
+                print(f"  ✗ 错误：URL不是Google Drive链接，跳过分析")
+                continue
+            
+            # 分析视频
+            analysis = self.video_analyzer.analyze_video(
+                video_path=None,
+                game_name=game_name,
+                game_info=video_info,
+                video_url=video_url
+            )
+            
+            if analysis:
+                # 提取并上传截图
+                screenshot_keys = None
+                if self.video_searcher.use_database and self.video_searcher.db:
+                    screenshot_keys = self.video_searcher.db.get_screenshot_key(game_name)
+                    if screenshot_keys:
+                        print(f"  ✓ 从数据库找到截图image_key（共{len(screenshot_keys)}张）")
+                    elif video_path and os.path.exists(video_path):
+                        screenshot_keys = self._extract_and_upload_screenshot(video_path, game_name)
+                        if screenshot_keys:
+                            self.video_searcher.db.update_screenshot_key(game_name, screenshot_keys)
+                            print(f"  ✓ 已上传游戏截图到飞书并保存到数据库（共{len(screenshot_keys)}张）")
+                
+                if screenshot_keys:
+                    analysis["screenshot_image_keys"] = screenshot_keys
+                    analysis["screenshot_image_key"] = screenshot_keys[0] if screenshot_keys else None
+                
+                # 添加游戏信息和视频信息
+                game_info = video_result.get("game_info", {})
+                analysis["game_rank"] = game_info.get("排名", "")
+                analysis["game_company"] = game_info.get("开发公司", "")
+                analysis["rank_change"] = game_info.get("排名变化", "--")
+                analysis["gdrive_url"] = video_result.get("gdrive_url", video_url)
+                
+                analyses.append(analysis)
+                print(f"✓ 完成分析：{game_name}")
+            else:
+                print(f"✗ 分析失败：{game_name}")
+        
+        # 保存中间产物
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = f"data/step3_analyses_{timestamp}.json"
+        try:
+            os.makedirs("data", exist_ok=True)
+            import json
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(analyses, f, ensure_ascii=False, indent=2)
+            print(f"\n✓ 视频分析完成")
+            print(f"  中间产物已保存到：{output_file}\n")
+        except Exception as e:
+            print(f"\n✓ 视频分析完成")
+            print(f"  保存中间产物失败：{str(e)}\n")
+        
+        return analyses
+    
+    def step4_generate_report(self, analyses: List[Dict]) -> str:
+        """
+        步骤4：生成日报
+        
+        Args:
+            analyses: 分析结果列表
+        
+        Returns:
+            日报JSON字符串
+        """
+        print("【步骤4】生成日报...")
+        report_json = self.report_generator.generate_daily_report(analyses)
+        
+        # 保存中间产物
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = f"data/step4_report_{timestamp}.json"
+        try:
+            os.makedirs("data", exist_ok=True)
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(report_json)
+            print("✓ 日报生成完成")
+            print(f"  中间产物已保存到：{output_file}\n")
+        except Exception as e:
+            print("✓ 日报生成完成")
+            print(f"  保存中间产物失败：{str(e)}\n")
+        
+        return report_json
+    
+    def step5_send_report(self, analyses: List[Dict]) -> bool:
+        """
+        步骤5：发送日报到飞书
+        
+        Args:
+            analyses: 分析结果列表
+        
+        Returns:
+            是否发送成功
+        """
+        print("【步骤5】发送日报到飞书...")
+        feishu_report = self.report_generator.generate_feishu_format(analyses)
+        
+        # 保存发送前的卡片数据
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = f"data/step5_feishu_card_{timestamp}.json"
+        try:
+            os.makedirs("data", exist_ok=True)
+            import json
+            with open(output_file, 'w', encoding='utf-8') as f:
+                json.dump(feishu_report, f, ensure_ascii=False, indent=2)
+            print(f"  飞书卡片数据已保存到：{output_file}")
+        except Exception as e:
+            print(f"  保存飞书卡片数据失败：{str(e)}")
+        
+        success = self.feishu_sender.send_card(feishu_report)
+        
+        if success:
+            print("✓ 日报发送成功\n")
+        else:
+            print("✗ 日报发送失败（请检查飞书Webhook配置）\n")
+        
+        return success
+    
+    def run(self, max_games: int = None, skip_scrape: bool = False, steps: List[int] = None):
+        """
+        运行完整工作流或指定步骤
         
         Args:
             max_games: 最大处理游戏数量，默认使用配置文件中的值
+            skip_scrape: 是否跳过爬取步骤（直接使用现有CSV文件）
+            steps: 要执行的步骤列表，如 [0,1,2,3,4,5]，None表示执行所有步骤
         """
         print("=" * 60)
         print("小游戏热榜玩法解析日报工作流")
         print("=" * 60)
         print()
         
+        if steps is None:
+            steps = [0, 1, 2, 3, 4, 5]
+        
+        games = None
+        video_results = None
+        analyses = None
+        
+        # 步骤0：爬取排行榜
+        if 0 in steps:
+            if not skip_scrape:
+                self.step0_scrape_rankings()
+            else:
+                print("【步骤0】跳过爬取步骤，使用现有CSV文件\n")
+        
         # 步骤1：提取排行榜
-        print("【步骤1】提取游戏排行榜...")
-        max_games = max_games or config.MAX_GAMES_TO_PROCESS
-        games = self.rank_extractor.get_top_games(top_n=max_games)
+        if 1 in steps:
+            games = self.step1_extract_rankings(max_games)
+            if not games:
+                print("错误：未能提取到游戏信息，工作流终止")
+                return
         
-        if not games:
-            print("错误：未能提取到游戏信息，工作流终止")
-            return
+        # 步骤2：搜索下载视频
+        if 2 in steps:
+            if games is None:
+                # 尝试从中间产物加载
+                games = self._load_latest_step1_result()
+                if not games:
+                    print("错误：没有可用的游戏列表，请先执行步骤1")
+                    return
+            video_results = self.step2_search_videos(games)
         
-        print(f"成功提取 {len(games)} 个游戏\n")
+        # 步骤3：分析视频
+        if 3 in steps:
+            if video_results is None:
+                # 尝试从中间产物加载
+                video_results = self._load_latest_step2_result()
+                if not video_results:
+                    print("错误：没有可用的视频数据，请先执行步骤2")
+                    return
+            analyses = self.step3_analyze_videos(video_results)
+            if not analyses:
+                print("错误：未能生成任何分析结果，工作流终止")
+                return
+        
+        # 步骤4：生成日报
+        if 4 in steps:
+            if analyses is None:
+                # 尝试从中间产物加载
+                analyses = self._load_latest_step3_result()
+                if not analyses:
+                    print("错误：没有可用的分析结果，请先执行步骤3")
+                    return
+            self.step4_generate_report(analyses)
+        
+        # 步骤5：发送日报
+        if 5 in steps:
+            if analyses is None:
+                # 尝试从中间产物加载
+                analyses = self._load_latest_step3_result()
+                if not analyses:
+                    print("错误：没有可用的分析结果，请先执行步骤3")
+                    return
+            self.step5_send_report(analyses)
+        
+        print("=" * 60)
+        print("工作流执行完成")
+        print("=" * 60)
+    
+    def _load_latest_step1_result(self) -> Optional[List[Dict]]:
+        """加载最新的步骤1结果"""
+        import glob
+        import json
+        files = glob.glob("data/step1_rankings_*.json")
+        if files:
+            latest = max(files)
+            try:
+                with open(latest, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                pass
+        return None
+    
+    def _load_latest_step2_result(self) -> Optional[List[Dict]]:
+        """加载最新的步骤2结果"""
+        import glob
+        import json
+        files = glob.glob("data/step2_videos_*.json")
+        if files:
+            latest = max(files)
+            try:
+                with open(latest, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                pass
+        return None
+    
+    def _load_latest_step3_result(self) -> Optional[List[Dict]]:
+        """加载最新的步骤3结果"""
+        import glob
+        import json
+        files = glob.glob("data/step3_analyses_*.json")
+        if files:
+            latest = max(files)
+            try:
+                with open(latest, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                pass
+        return None
         
         # 步骤2和3：搜索下载视频并分析
         print("【步骤2-3】搜索视频并分析游戏玩法...")
@@ -255,6 +667,7 @@ class GameAnalysisWorkflow:
         
         for idx, game in enumerate(games, 1):
             game_name = game.get('游戏名称', '未知游戏')
+            game_type = game.get('游戏类型')  # 保存原始的游戏类型信息
             print(f"\n处理游戏 {idx}/{len(games)}: {game_name}")
             
             # 步骤1：检查数据库中是否已有完整的视频数据（搜索、下载、Google Drive）
@@ -264,7 +677,8 @@ class GameAnalysisWorkflow:
             aweme_id = None
             
             if self.video_searcher.use_database and self.video_searcher.db:
-                videos = self.video_searcher.db.get_videos_by_game(game_name)
+                db_game = self.video_searcher.db.get_game(game_name)
+                videos = [db_game] if db_game else []
                 if videos:
                     video_info = videos[0]
                     aweme_id = video_info.get("aweme_id")
@@ -289,12 +703,13 @@ class GameAnalysisWorkflow:
                     print(f"  数据库中未找到已下载的视频，开始搜索...")
                     video_path = self.video_searcher.search_and_download(
                         game_name=game_name,
-                        game_type=game.get('游戏类型')
+                        game_type=game_type  # 使用保存的原始游戏类型
                     )
                 
                 # 重新从数据库获取最新信息
                 if self.video_searcher.use_database and self.video_searcher.db:
-                    videos = self.video_searcher.db.get_videos_by_game(game_name)
+                    game = self.video_searcher.db.get_game(game_name)
+                    videos = [game] if game else []
                     if videos:
                         video_info = videos[0]
                         aweme_id = video_info.get("aweme_id")
@@ -411,18 +826,64 @@ class GameAnalysisWorkflow:
 
 def main():
     """主函数"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(
+        description='小游戏热榜玩法解析日报工作流',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+步骤说明：
+  0 - 爬取游戏排行榜
+  1 - 提取游戏排行榜
+  2 - 搜索并下载视频
+  3 - 分析视频
+  4 - 生成日报
+  5 - 发送日报到飞书
+
+示例：
+  python main.py                    # 执行所有步骤
+  python main.py --steps 0,1        # 只执行步骤0和1
+  python main.py --steps 2,3        # 只执行步骤2和3
+  python main.py --step 1           # 只执行步骤1
+        """
+    )
+    parser.add_argument('max_games', type=int, nargs='?', default=None,
+                        help='最大处理游戏数量')
+    parser.add_argument('--skip-scrape', action='store_true',
+                        help='跳过爬取步骤，直接使用现有CSV文件')
+    parser.add_argument('--scrape-only', action='store_true',
+                        help='只执行爬取步骤，不进行后续分析')
+    parser.add_argument('--steps', type=str,
+                        help='要执行的步骤，用逗号分隔，如：0,1,2,3,4,5')
+    parser.add_argument('--step', type=int,
+                        help='只执行单个步骤（0-5）')
+    
+    args = parser.parse_args()
+    
     workflow = GameAnalysisWorkflow()
     
-    # 可以在这里添加命令行参数解析
-    if len(sys.argv) > 1:
+    # 如果只爬取
+    if args.scrape_only:
+        print("=" * 60)
+        print("爬取游戏排行榜")
+        print("=" * 60)
+        print()
+        workflow.step0_scrape_rankings()
+        return
+    
+    # 解析步骤参数
+    steps = None
+    if args.step is not None:
+        steps = [args.step]
+    elif args.steps:
         try:
-            max_games = int(sys.argv[1])
-            workflow.run(max_games=max_games)
+            steps = [int(s.strip()) for s in args.steps.split(',')]
         except ValueError:
-            print("错误：参数必须是数字")
+            print("错误：步骤格式不正确，应为数字，用逗号分隔")
             sys.exit(1)
-    else:
-        workflow.run()
+    
+    # 运行工作流
+    workflow.run(max_games=args.max_games, skip_scrape=args.skip_scrape, steps=steps)
 
 
 if __name__ == "__main__":

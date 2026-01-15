@@ -30,7 +30,19 @@ class RankExtractor:
             游戏排行榜列表，每个游戏包含排名、名称、类型等信息
         """
         try:
-            df = pd.read_csv(self.csv_path, encoding='utf-8')
+            # 尝试多种编码格式
+            encodings = ['utf-8-sig', 'utf-8', 'gbk', 'gb2312']
+            df = None
+            
+            for encoding in encodings:
+                try:
+                    df = pd.read_csv(self.csv_path, encoding=encoding)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            
+            if df is None:
+                raise Exception("无法使用任何编码格式读取CSV文件")
             
             # 转换为字典列表
             games = df.to_dict('records')
@@ -44,19 +56,20 @@ class RankExtractor:
             
         except FileNotFoundError:
             print(f"错误：找不到文件 {self.csv_path}")
+            print(f"  提示：请先运行爬取步骤或确保CSV文件存在")
             return []
         except Exception as e:
             print(f"提取排行榜时发生错误：{str(e)}")
             return []
     
-    def get_top_games(self, top_n: int = 5) -> List[Dict]:
+    def get_top_games(self, top_n: int = None) -> List[Dict]:
         """
         获取前N名游戏
         
         Args:
-            top_n: 前N名
+            top_n: 前N名，如果为None则返回所有游戏
         
         Returns:
-            前N名游戏列表
+            游戏列表
         """
         return self.extract_rankings(limit=top_n)

@@ -58,11 +58,20 @@ MAX_GAMES_TO_PROCESS=5
 4. 创建API令牌并复制
 5. 将令牌配置到 `.env` 文件中的 `DOUYIN_API_TOKEN`
 
+## 安装依赖
+
+```bash
+pip install -r requirements.txt
+
+# 安装 Playwright 浏览器（用于爬取排行榜）
+playwright install chromium
+```
+
 ## 使用方法
 
 ### 完整工作流
 
-运行完整的工作流（搜索视频 → 分析 → 生成日报 → 发送）：
+运行完整的工作流（爬取排行榜 → 搜索视频 → 分析 → 生成日报 → 发送）：
 
 ```bash
 python main.py
@@ -72,6 +81,18 @@ python main.py
 
 ```bash
 python main.py 10
+```
+
+跳过爬取步骤（使用现有CSV文件）：
+
+```bash
+python main.py --skip-scrape
+```
+
+只执行爬取步骤：
+
+```bash
+python main.py --scrape-only
 ```
 
 ### 单独执行视频搜索

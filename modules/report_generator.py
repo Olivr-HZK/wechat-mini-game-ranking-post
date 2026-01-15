@@ -183,6 +183,10 @@ class ReportGenerator:
             game_data = {
                 "index": idx,
                 "game_name": game_name,
+                "game_rank": analysis.get("game_rank", ""),  # 游戏排名
+                "game_company": analysis.get("game_company", ""),  # 开发公司
+                "rank_change": analysis.get("rank_change", "--"),  # 排名变化
+                "gdrive_url": analysis.get("gdrive_url", ""),  # Google Drive视频链接
                 "core_gameplay": core_gameplay,
                 "attraction": attraction,
                 "analysis_data": analysis_data,  # 保留结构化数据
@@ -270,12 +274,28 @@ class ReportGenerator:
                 core_gameplay = content["core_gameplay"]
                 attraction = content["attraction"]
             
-            # 游戏标题
+            # 游戏标题和信息
+            game_rank = analysis.get("game_rank", "")
+            game_company = analysis.get("game_company", "")
+            rank_change = analysis.get("rank_change", "--")
+            gdrive_url = analysis.get("gdrive_url", "")
+            
+            # 构建游戏信息标题
+            title_parts = [f"**【游戏 {idx}】{game_name}**"]
+            if game_rank:
+                title_parts.append(f"排名：{game_rank}")
+            if game_company:
+                title_parts.append(f"开发公司：{game_company}")
+            if rank_change and rank_change != "--":
+                title_parts.append(f"排名变化：{rank_change}")
+            if gdrive_url:
+                title_parts.append(f"[视频链接]({gdrive_url})")
+            
             elements.append({
                 "tag": "div",
                 "text": {
                     "tag": "lark_md",
-                    "content": f"**【游戏 {idx}】{game_name}**"
+                    "content": " | ".join(title_parts)
                 }
             })
             

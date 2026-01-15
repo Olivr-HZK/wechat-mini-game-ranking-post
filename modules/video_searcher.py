@@ -55,14 +55,11 @@ class VideoSearcher:
         """
         # 先检查数据库中是否已有该游戏的视频
         if self.use_database and self.db:
-            existing_videos = self.db.get_videos_by_game(game_name)
-            if existing_videos:
-                # 返回数据库中已有的视频（按点赞数排序，取第一个）
-                existing_videos.sort(key=lambda x: x.get("like_count", 0), reverse=True)
-                top_video = existing_videos[0]
-                print(f"  ✓ 从数据库找到视频：{top_video.get('title', 'N/A')[:50]}")
-                print(f"    点赞数：{top_video.get('like_count', 0):,}")
-                return [top_video]
+            existing_game = self.db.get_game(game_name)
+            if existing_game:
+                print(f"  ✓ 从数据库找到游戏视频：{existing_game.get('title', 'N/A')[:50]}")
+                print(f"    点赞数：{existing_game.get('like_count', 0):,}")
+                return [existing_game]
         
         if not self.api_token:
             print(f"警告：未配置抖音API Token，使用Mock数据")
@@ -594,7 +591,7 @@ class VideoSearcher:
         
         # 先检查数据库中是否已有下载的视频
         if self.use_database and self.db:
-            existing = self.db.get_video(aweme_id)
+            existing = self.db.get_game(game_name)
             if existing and existing.get("downloaded") == 1 and existing.get("local_path"):
                 local_path = existing.get("local_path")
                 if os.path.exists(local_path):
@@ -840,15 +837,15 @@ class VideoSearcher:
                 print(f"视频已保存到：{local_path}")
                 
                 # 更新数据库下载状态
-                if self.use_database and self.db and aweme_id:
+                if self.use_database and self.db:
                     # 自动上传到Google Drive并获取URL（先检查数据库）
                     gdrive_url, gdrive_file_id = self._upload_to_gdrive(local_path, game_name, aweme_id)
                     # 更新数据库（如果gdrive_url已存在，不会覆盖）
                     if gdrive_url:
-                        self.db.update_download_status(aweme_id, local_path, gdrive_url, gdrive_file_id)
+                        self.db.update_download_status(game_name, local_path, gdrive_url, gdrive_file_id)
                     else:
                         # 只更新下载状态
-                        self.db.update_download_status(aweme_id, local_path)
+                        self.db.update_download_status(game_name, local_path)
                 
                 return local_path
             else:
@@ -872,13 +869,16 @@ class VideoSearcher:
             (gdrive_url, gdrive_file_id) 元组，如果失败返回 (None, None)
         """
         # 先检查数据库中是否已有Google Drive链接
-        if self.use_database and self.db and aweme_id:
-            existing = self.db.get_video(aweme_id)
-            if existing and existing.get("gdrive_url"):
-                gdrive_url = existing.get("gdrive_url")
-                gdrive_file_id = existing.get("gdrive_file_id")
-                print(f"  ✓ 从数据库找到Google Drive链接：{gdrive_url[:60]}...")
-                return (gdrive_url, gdrive_file_id)
+        if self.use_database and self.db:
+            # 从video_path中提取game_name（格式：data/videos/游戏名_aweme_id.mp4）
+            game_name_from_path = os.path.basename(video_path).split('_')[0] if '_' in os.path.basename(video_path) else None
+            if game_name_from_path:
+                existing = self.db.get_game(game_name_from_path)
+                if existing and existing.get("gdrive_url"):
+                    gdrive_url = existing.get("gdrive_url")
+                    gdrive_file_id = existing.get("gdrive_file_id")
+                    print(f"  ✓ 从数据库找到Google Drive链接：{gdrive_url[:60]}...")
+                    return (gdrive_url, gdrive_file_id)
         
         try:
             from modules.gdrive_uploader import GoogleDriveUploader
@@ -894,9 +894,12 @@ class VideoSearcher:
                 print(f"  Google Drive链接：{gdrive_url[:60]}...")
                 
                 # 保存到数据库
-                if self.use_database and self.db and aweme_id:
-                    self.db.update_download_status(aweme_id, video_path, gdrive_url, gdrive_file_id)
-                    print(f"  ✓ 已保存Google Drive链接到数据库")
+                if self.use_database and self.db:
+                    # 从video_path中提取game_name
+                    game_name_from_path = os.path.basename(video_path).split('_')[0] if '_' in os.path.basename(video_path) else None
+                    if game_name_from_path:
+                        self.db.update_download_status(game_name_from_path, video_path, gdrive_url, gdrive_file_id)
+                        print(f"  ✓ 已保存Google Drive链接到数据库")
                 
                 return (gdrive_url, gdrive_file_id)
             else:
@@ -953,11 +956,11 @@ class VideoSearcher:
         """
         # 步骤1：先检查数据库中是否已有已下载的视频
         if self.use_database and self.db:
-            existing_videos = self.db.get_videos_by_game(game_name)
+            existing_game = self.db.get_game(game_name)
             # 查找已下载且有本地文件的视频
-            for video in existing_videos:
-                if video.get("downloaded") == 1 and video.get("local_path"):
-                    local_path = video.get("local_path")
+            if existing_game:
+                if existing_game.get("downloaded") == 1 and existing_game.get("local_path"):
+                    local_path = existing_game.get("local_path")
                     if os.path.exists(local_path):
                         print(f"  ✓ 从数据库找到已下载的视频：{local_path}")
                         return local_path
@@ -974,7 +977,7 @@ class VideoSearcher:
         
         # 检查数据库中是否已有该视频信息（避免重复搜索）
         if self.use_database and self.db:
-            existing = self.db.get_video(video_info.get("aweme_id"))
+            existing = self.db.get_game(game_name)
             if existing:
                 print(f"  ✓ 视频信息已存在于数据库，使用现有数据")
                 video_info = existing
@@ -984,7 +987,7 @@ class VideoSearcher:
         
         # 步骤3：检查是否已下载
         if self.use_database and self.db:
-            existing = self.db.get_video(video_info.get("aweme_id"))
+            existing = self.db.get_game(game_name)
             if existing and existing.get("downloaded") == 1 and existing.get("local_path"):
                 local_path = existing.get("local_path")
                 if os.path.exists(local_path):

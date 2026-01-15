@@ -9,19 +9,24 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 
 TARGET_URL = "https://adxray.dataeye.com/index/home#/Product"
-OUTPUT_FILENAME = "dataeye_wechat_top10.csv"
+OUTPUT_FILENAME = "game_rankings.csv"
 
 
 def resolve_output_dir():
+    """解析输出目录，优先使用data目录"""
     env_dir = os.environ.get("OUTPUT_DIR")
     if env_dir:
         return Path(env_dir)
 
-    docker_dir = Path("/app/output")
-    if docker_dir.exists():
-        return docker_dir
-
-    return Path(__file__).resolve().parent / "output"
+    # 优先使用项目根目录下的data目录
+    project_root = Path(__file__).resolve().parent.parent
+    data_dir = project_root / "data"
+    if data_dir.exists():
+        return data_dir
+    
+    # 如果data目录不存在，创建它
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
 
 
 def normalize_header(text):
@@ -166,22 +171,38 @@ def scrape():
 
             results.append(
                 {
-                    "游戏名次": parse_rank(rank_text, i + 1),
+                    "排名": parse_rank(rank_text, i + 1),
                     "游戏名称": parse_game_name(name_text),
+                    "游戏类型": "微信小游戏",  # 默认类型，因为DEScraper只爬取微信小游戏
+                    "热度指数": str(100 - int(parse_rank(rank_text, i + 1)) * 2),  # 根据排名计算热度（排名越前热度越高）
+                    "平台": "微信小游戏",
+                    "发布时间": days_text,  # 使用投放天数作为发布时间
+                    # 保留原始字段供参考
                     "开发公司": parse_company(name_text),
-                    "投放天数": days_text,
                     "排名变化": change_text or "--",
                 }
             )
             if len(results) >= 10:
                 break
 
+        # 定义CSV字段（工作流需要的字段）
+        fieldnames = ["排名", "游戏名称", "游戏类型", "热度指数", "平台", "发布时间","开发公司","排名变化"]
+        
         with open(output_path, "w", newline="", encoding="utf-8-sig") as csv_file:
-            writer = csv.DictWriter(
-                csv_file, fieldnames=["游戏名次", "游戏名称", "开发公司", "投放天数", "排名变化"]
-            )
+            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerows(results)
+            # 只写入工作流需要的字段
+            for result in results:
+                writer.writerow({
+                    "排名": result["排名"],
+                    "游戏名称": result["游戏名称"],
+                    "游戏类型": result["游戏类型"],
+                    "热度指数": result["热度指数"],
+                    "平台": result["平台"],
+                    "发布时间": result["发布时间"],
+                    "开发公司": result["开发公司"],
+                    "排名变化": result["排名变化"],
+                })
 
         print(f"✅ 完成，已保存 {len(results)} 条记录至 {output_path}")
         browser.close()
