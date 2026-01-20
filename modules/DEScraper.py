@@ -34,7 +34,7 @@ def normalize_header(text):
 
 
 def pick_column_indices(headers):
-    indices = {"rank": None, "name": None, "days": None, "change": None}
+    indices = {"rank": None, "name": None, "days": None, "change": None, "type": None}
     for idx, header in enumerate(headers):
         cleaned = normalize_header(header)
         if cleaned == "排名":
@@ -45,8 +45,10 @@ def pick_column_indices(headers):
             indices["days"] = idx
         elif "排名变化" in cleaned:
             indices["change"] = idx
+        elif "类型" in cleaned or "分类" in cleaned or "category" in cleaned.lower():
+            indices["type"] = idx
 
-    fallback = {"rank": 0, "name": 1, "days": 4, "change": 5}
+    fallback = {"rank": 0, "name": 1, "days": 4, "change": 5, "type": None}
     for key, value in fallback.items():
         if indices[key] is None:
             indices[key] = value
@@ -88,6 +90,46 @@ def parse_company(text):
     if len(lines) >= 2:
         return lines[1]
     return ""
+
+
+def parse_game_type(cell_text):
+    """解析游戏类型"""
+    if not cell_text:
+        return ""
+    return cell_text.strip()
+
+
+def is_puzzle_game(game_type_text, game_name=""):
+    """
+    判断是否为益智游戏（puzzle game）
+    
+    Args:
+        game_type_text: 游戏类型文本
+        game_name: 游戏名称（用于辅助判断）
+    
+    Returns:
+        bool: 如果是益智游戏返回True
+    """
+    if not game_type_text:
+        # 如果没有类型信息，可以通过游戏名称关键词判断
+        puzzle_keywords = [
+            "消消乐", "消除", "三消", "合成", "拼图", "数独", "填字", "解谜",
+            "找茬", "找不同", "连连看", "俄罗斯方块", "2048", "华容道",
+            "推箱子", "扫雷", "拼图", "益智", "puzzle", "消除类", "解谜类"
+        ]
+        game_name_lower = game_name.lower()
+        return any(keyword in game_name_lower for keyword in puzzle_keywords)
+    
+    game_type_lower = game_type_text.lower()
+    
+    # 明确的益智游戏类型关键词
+    puzzle_keywords = [
+        "puzzle", "益智", "消除", "三消", "解谜", "拼图", "合成",
+        "消消乐", "消除类", "解谜类", "益智类"
+    ]
+    
+    # 检查是否包含益智游戏关键词
+    return any(keyword in game_type_lower for keyword in puzzle_keywords)
 
 
 def scrape():
@@ -152,7 +194,7 @@ def scrape():
 
         rows_locator = table.locator("tbody tr.ant-table-row")
         total_rows = rows_locator.count()
-        print(f"[*] 发现 {total_rows} 条记录，筛选微信小游戏直到凑满 10 条。")
+        print(f"[*] 发现 {total_rows} 条记录，筛选微信小游戏中的益智游戏（puzzle game）直到凑满 10 条。")
 
         results = []
         for i in range(total_rows):
@@ -160,6 +202,7 @@ def scrape():
             row.scroll_into_view_if_needed()
             time.sleep(random.uniform(0.3, 0.9))
 
+            # 首先检查是否为微信小游戏
             if not has_wechat_icon(row):
                 continue
 
@@ -168,12 +211,23 @@ def scrape():
             name_text = cell_text(cells, column_indices["name"])
             days_text = cell_text(cells, column_indices["days"])
             change_text = cell_text(cells, column_indices["change"])
+            
+            # 提取游戏类型（如果存在）
+            game_type_text = ""
+            if column_indices["type"] is not None:
+                game_type_text = cell_text(cells, column_indices["type"])
+            
+            game_name = parse_game_name(name_text)
+            
+            # 检查是否为益智游戏（puzzle game）
+            if not is_puzzle_game(game_type_text, game_name):
+                continue  # 跳过非益智游戏
 
             results.append(
                 {
                     "排名": parse_rank(rank_text, i + 1),
-                    "游戏名称": parse_game_name(name_text),
-                    "游戏类型": "微信小游戏",  # 默认类型，因为DEScraper只爬取微信小游戏
+                    "游戏名称": game_name,
+                    "游戏类型": game_type_text if game_type_text else "益智游戏",  # 如果有类型信息则使用，否则默认为益智游戏
                     "热度指数": str(100 - int(parse_rank(rank_text, i + 1)) * 2),  # 根据排名计算热度（排名越前热度越高）
                     "平台": "微信小游戏",
                     "发布时间": days_text,  # 使用投放天数作为发布时间

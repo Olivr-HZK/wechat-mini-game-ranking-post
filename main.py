@@ -228,20 +228,40 @@ class GameAnalysisWorkflow:
     
     def step0_scrape_rankings(self) -> bool:
         """
-        步骤0：爬取游戏排行榜
+        步骤0：检查游戏排行榜CSV文件
         
         Returns:
             是否成功
         """
-        print("【步骤0】爬取游戏排行榜...")
+        print("【步骤0】检查游戏排行榜CSV文件...")
         try:
-            from modules.DEScraper import scrape
-            scrape()
-            print("✓ 排行榜爬取完成")
-            print(f"  中间产物已保存到：data/game_rankings.csv\n")
+            import os
+            csv_path = config.RANKINGS_CSV_PATH
+            
+            if not os.path.exists(csv_path):
+                print(f"⚠ CSV文件不存在：{csv_path}")
+                print(f"  请手动创建CSV文件，格式参考：data/game_rankings_template.csv")
+                return False
+            
+            # 验证CSV文件格式并统计数量
+            from modules.rank_extractor import RankExtractor
+            extractor = RankExtractor()
+            games = extractor.get_top_games(top_n=1)  # 只读取一条验证格式
+            
+            if not games:
+                print(f"⚠ CSV文件格式不正确或为空：{csv_path}")
+                print(f"  请检查CSV文件格式，参考：data/game_rankings_template.csv")
+                return False
+            
+            # 统计总游戏数量（读取所有数据）
+            all_games = extractor.get_top_games(top_n=None)
+            game_count = len(all_games) if all_games else 0
+            
+            print(f"✓ CSV文件检查通过：{csv_path}")
+            print(f"  文件包含 {game_count} 个游戏\n")
             return True
         except Exception as e:
-            print(f"⚠ 爬取失败：{str(e)}\n")
+            print(f"⚠ 检查CSV文件失败：{str(e)}\n")
             return False
     
     def step1_extract_rankings(self, max_games: int = None) -> Optional[List[Dict]]:
@@ -295,6 +315,8 @@ class GameAnalysisWorkflow:
         video_results = []
         
         for idx, game in enumerate(games, 1):
+            # 保留原始 CSV/榜单信息（不要被后续数据库查询覆盖）
+            csv_game = game.copy() if isinstance(game, dict) else {}
             game_name = game.get('游戏名称', '未知游戏')
             game_type = game.get('游戏类型')  # 保存原始的游戏类型信息
             print(f"\n处理游戏 {idx}/{len(games)}: {game_name}")
@@ -335,8 +357,8 @@ class GameAnalysisWorkflow:
                 
                 # 重新从数据库获取最新信息
                 if self.video_searcher.use_database and self.video_searcher.db:
-                    game = self.video_searcher.db.get_game(game_name)
-                    videos = [game] if game else []
+                    db_game = self.video_searcher.db.get_game(game_name)
+                    videos = [db_game] if db_game else []
                     if videos:
                         video_info = videos[0]
                         aweme_id = video_info.get("aweme_id")
@@ -358,7 +380,7 @@ class GameAnalysisWorkflow:
             # 获取完整的游戏信息（优先使用原始CSV数据，补充数据库中的视频信息）
             if video_info:
                 # 使用原始的game信息（来自CSV），确保包含排名、公司等信息
-                game_info = game.copy() if isinstance(game, dict) else {}
+                game_info = csv_game.copy() if isinstance(csv_game, dict) else {}
                 # 如果数据库中有视频信息，合并进去
                 if video_info:
                     game_info.update({
@@ -452,6 +474,11 @@ class GameAnalysisWorkflow:
                 analysis["game_rank"] = game_info.get("排名", "")
                 analysis["game_company"] = game_info.get("开发公司", "")
                 analysis["rank_change"] = game_info.get("排名变化", "--")
+                # 额外补充：监控日期/平台/来源/榜单（来自排行榜CSV）
+                analysis["monitor_date"] = game_info.get("监控日期", "")
+                analysis["platform"] = game_info.get("平台", "")
+                analysis["source"] = game_info.get("来源", "")
+                analysis["board_name"] = game_info.get("榜单", "")
                 analysis["gdrive_url"] = video_result.get("gdrive_url", video_url)
                 
                 analyses.append(analysis)

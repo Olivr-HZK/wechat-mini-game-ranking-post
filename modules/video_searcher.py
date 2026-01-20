@@ -57,17 +57,32 @@ class VideoSearcher:
         if self.use_database and self.db:
             existing_game = self.db.get_game(game_name)
             if existing_game:
-                print(f"  ✓ 从数据库找到游戏视频：{existing_game.get('title', 'N/A')[:50]}")
-                print(f"    点赞数：{existing_game.get('like_count', 0):,}")
-                return [existing_game]
+                # 注意：数据库里可能只存在“游戏记录”，但视频字段已被清空。
+                # 只有在确实存在可用视频信息时才走缓存，否则继续走API搜索。
+                has_video_info = any(
+                    [
+                        existing_game.get("aweme_id"),
+                        existing_game.get("gdrive_url"),
+                        existing_game.get("original_video_url"),
+                        existing_game.get("video_url"),
+                        existing_game.get("video_urls"),
+                        existing_game.get("downloaded") == 1,
+                    ]
+                )
+                if has_video_info:
+                    title_preview = str(existing_game.get("title") or "N/A")[:50]
+                    print(f"  ✓ 从数据库找到游戏视频：{title_preview}")
+                    print(f"    点赞数：{existing_game.get('like_count', 0):,}")
+                    return [existing_game]
         
         if not self.api_token:
             print(f"警告：未配置抖音API Token，使用Mock数据")
             return [self._mock_search_result(game_name)]
         
-        # 构建搜索关键词，只搜索玩法关键字
+        # 构建搜索关键词：统一使用“小游戏攻略”
+        # 例：羊了个羊 小游戏攻略
         keywords = [
-            f"{game_name}玩法"
+            f"{game_name} 小游戏攻略"
         ]
         
         all_videos = []
@@ -267,7 +282,7 @@ class VideoSearcher:
         # 显示前3个视频的点赞数和播放量（用于调试）
         if len(unique_videos) > 0:
             top_video = unique_videos[0]
-            print(f"  点赞播放量最高的视频：{top_video.get('title', 'N/A')[:50]}")
+            print(f"  点赞播放量最高的视频：{str(top_video.get('title') or 'N/A')[:50]}")
             print(f"    点赞数：{top_video.get('like_count', 0):,}")
             print(f"    播放量：{top_video.get('play_count', 0):,}")
             print(f"    视频ID：{top_video.get('aweme_id')}")
@@ -396,7 +411,7 @@ class VideoSearcher:
                 if kw in text:
                     score += 5
                     # 高优先级关键词额外加分
-                    if kw in ["玩法", "演示", "怎么玩", "教程"]:
+                    if kw in ["玩法", "演示", "怎么玩", "教程", "攻略"]:
                         score += 3
             
             # 时长加分：15-60秒的视频更适合玩法演示

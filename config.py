@@ -18,6 +18,10 @@ FEISHU_WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL", "")
 FEISHU_APP_ID = os.getenv("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.getenv("FEISHU_APP_SECRET", "")
 
+# 企业微信机器人配置（群机器人 Webhook）
+WECOM_WEBHOOK_URL = os.getenv("WECOM_WEBHOOK_URL", "")
+WECOM_WEBHOOK_URL_REAL = os.getenv("WECOM_WEBHOOK_URL_REAL", "")
+
 # 抖音搜索API配置
 DOUYIN_API_BASE_URL = "https://api.tikhub.io"
 DOUYIN_API_TOKEN = os.getenv("DOUYIN_API_TOKEN", "")

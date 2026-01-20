@@ -735,6 +735,78 @@ class VideoDatabase:
         except Exception as e:
             print(f"清除玩法分析时出错：{str(e)}")
             return 0
+
+    def clear_all_gameplay_videos(self) -> int:
+        """
+        清空数据库中所有游戏的“玩法视频相关字段”（不删除游戏记录）。
+        用于让工作流下次重新搜索/下载/上传视频。
+
+        注意：
+        - 仅清理 videos 相关字段（aweme_id / video_url / gdrive_url / local_path 等）
+        - 不会清理 gameplay_analysis（玩法分析缓存），如需清理请单独处理
+
+        Returns:
+            受影响的记录数
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                UPDATE games SET
+                    aweme_id = NULL,
+                    title = NULL,
+                    description = NULL,
+                    video_url = NULL,
+                    video_urls = NULL,
+                    cover_url = NULL,
+                    author_uid = NULL,
+                    duration = NULL,
+                    like_count = 0,
+                    comment_count = 0,
+                    play_count = 0,
+                    create_time = NULL,
+                    share_url = NULL,
+                    original_video_url = NULL,
+                    gdrive_url = NULL,
+                    gdrive_file_id = NULL,
+                    local_path = NULL,
+                    downloaded = 0,
+                    search_keyword = NULL,
+                    relevance_score = 0,
+                    screenshot_image_key = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE
+                    aweme_id IS NOT NULL
+                    OR video_url IS NOT NULL
+                    OR (video_urls IS NOT NULL AND video_urls != '')
+                    OR cover_url IS NOT NULL
+                    OR share_url IS NOT NULL
+                    OR original_video_url IS NOT NULL
+                    OR gdrive_url IS NOT NULL
+                    OR gdrive_file_id IS NOT NULL
+                    OR local_path IS NOT NULL
+                    OR downloaded != 0
+                    OR (search_keyword IS NOT NULL AND search_keyword != '')
+                    OR relevance_score != 0
+                    OR (screenshot_image_key IS NOT NULL AND screenshot_image_key != '')
+                """
+            )
+
+            count = cursor.rowcount
+            conn.commit()
+            conn.close()
+
+            if count > 0:
+                print(f"已清空 {count} 条游戏记录的玩法视频字段（保留游戏与分析结果）")
+            else:
+                print("数据库中未发现需要清理的玩法视频字段")
+
+            return count
+        except Exception as e:
+            print(f"清空所有玩法视频字段时出错：{str(e)}")
+            return 0
     
     def delete_game_data(self, game_name: str) -> int:
         """

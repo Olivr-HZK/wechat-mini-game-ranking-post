@@ -9,6 +9,10 @@ FEISHU_WEBHOOK_URL=your_feishu_webhook_url_here
 FEISHU_APP_ID=your_feishu_app_id_here
 FEISHU_APP_SECRET=your_feishu_app_secret_here
 
+# 企业微信机器人配置（群机器人 Webhook）
+WECOM_WEBHOOK_URL=your_wecom_webhook_url_here
+WECOM_WEBHOOK_URL_REAL=your_wecom_real_wechat_webhook_url_here
+
 # 抖音搜索API配置（TikHub）
 DOUYIN_API_TOKEN=
 # 抖音下载API配置（可选）

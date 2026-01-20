@@ -186,6 +186,10 @@ class ReportGenerator:
                 "game_rank": analysis.get("game_rank", ""),  # 游戏排名
                 "game_company": analysis.get("game_company", ""),  # 开发公司
                 "rank_change": analysis.get("rank_change", "--"),  # 排名变化
+                "monitor_date": analysis.get("monitor_date", ""),  # 监控日期 YYYY-MM-DD
+                "platform": analysis.get("platform", ""),  # vx / dy
+                "source": analysis.get("source", ""),  # 榜单
+                "board_name": analysis.get("board_name", ""),  # 榜单名称
                 "gdrive_url": analysis.get("gdrive_url", ""),  # Google Drive视频链接
                 "core_gameplay": core_gameplay,
                 "attraction": attraction,
@@ -279,6 +283,10 @@ class ReportGenerator:
             game_company = analysis.get("game_company", "")
             rank_change = analysis.get("rank_change", "--")
             gdrive_url = analysis.get("gdrive_url", "")
+            monitor_date = analysis.get("monitor_date", "")
+            platform = analysis.get("platform", "")
+            source = analysis.get("source", "")
+            board_name = analysis.get("board_name", "")
             
             # 构建游戏信息标题
             title_parts = [f"**【游戏 {idx}】{game_name}**"]
@@ -286,6 +294,14 @@ class ReportGenerator:
                 title_parts.append(f"排名：{game_rank}")
             if game_company:
                 title_parts.append(f"开发公司：{game_company}")
+            if monitor_date:
+                title_parts.append(f"监控日期：{monitor_date}")
+            if platform:
+                title_parts.append(f"平台：{platform}")
+            if source:
+                title_parts.append(f"来源：{source}")
+            if board_name:
+                title_parts.append(f"榜单：{board_name}")
             if rank_change and rank_change != "--":
                 title_parts.append(f"排名变化：{rank_change}")
             if gdrive_url:
