@@ -9,7 +9,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 import time
 from pathlib import Path
 import json
@@ -91,7 +91,17 @@ def debug_page_structure():
             print(f"[*] 访问: {TARGET_URL}")
             page.on("request", _log_request)
             page.on("response", _log_response)
-            page.goto(TARGET_URL, wait_until="networkidle", timeout=90000)
+
+            # 注意：该站点是 SPA，且可能存在持续请求/长连接，等待 networkidle 容易超时。
+            # 调试脚本优先确保“能打开页面”，后续由你手动登录/切换榜单触发接口请求。
+            try:
+                page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=120000)
+            except PlaywrightTimeout:
+                print("[!] domcontentloaded 超时，继续打开浏览器（你可以手动刷新/登录）")
+                try:
+                    page.goto(TARGET_URL, wait_until="load", timeout=120000)
+                except Exception as e:
+                    print(f"[!] 二次尝试加载仍失败：{e}（继续执行，可能需要你手动刷新）")
 
             print("\n" + "=" * 60)
             print("接下来你需要在弹出的浏览器里做两件事：")
@@ -149,6 +159,42 @@ def debug_page_structure():
                     print(f"[*] 网络日志已保存: {network_path}（{len(network_log)} 条）")
             except Exception as e:
                 print(f"[!] 保存网络日志时出错: {str(e)}")
+
+            # 额外：打印“排行榜接口 public_list”请求摘要，方便确认是否切到了周榜
+            try:
+                rank_reqs = [
+                    x
+                    for x in network_log
+                    if x.get("type") == "request"
+                    and isinstance(x.get("url"), str)
+                    and "apprank/api/v1/rank/public_list" in x.get("url", "")
+                ]
+                if rank_reqs:
+                    print("\n" + "=" * 60)
+                    print("public_list 请求摘要（用于确认日榜/周榜/月榜参数）")
+                    print("=" * 60)
+                    for i, r in enumerate(rank_reqs[-12:], 1):
+                        post_data = r.get("post_data") or ""
+                        try:
+                            payload = json.loads(post_data) if post_data else {}
+                        except Exception:
+                            payload = {}
+                        filters = payload.get("filters") or []
+                        filt_kv = {}
+                        for f in filters:
+                            field = f.get("field")
+                            values = f.get("values")
+                            if field:
+                                filt_kv[field] = values
+                        print(f"[{i}] filters={filt_kv}")
+                        # 如果有其它关键字段，也打印出来
+                        extra = {k: v for k, v in payload.items() if k not in {"filters"}}
+                        if extra:
+                            print(f"    extra_keys={list(extra.keys())}")
+                else:
+                    print("\n[*] 未捕获到 public_list 请求（可能还没加载出榜单数据）")
+            except Exception:
+                pass
             
             # 检查页面元素
             print("\n" + "="*60)

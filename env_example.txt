@@ -34,3 +34,8 @@ API_REQUEST_DELAY=1.0
 API_MAX_RETRIES=3
 # 重试延迟（秒）
 API_RETRY_DELAY=2.0
+
+# Google Sheets（游戏排行榜写入，单独凭证，不复用 Drive）
+GOOGLE_SHEET_ID=your_google_sheet_id_here
+GOOGLE_SHEETS_CREDENTIALS=path/to/your/sheets_credentials.json
+# GOOGLE_SHEETS_TOKEN=path/to/token_sheets.json

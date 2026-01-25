@@ -149,7 +149,10 @@ class ReportGenerator:
             if analysis_data and isinstance(analysis_data, dict):
                 # 使用结构化的JSON数据
                 core_gameplay_data = analysis_data.get("core_gameplay", {})
-                attraction_data = analysis_data.get("attraction", {})
+                attraction_data = analysis_data.get("attraction", {})  # 兼容旧格式（可能不存在）
+                genre_baseline_data = analysis_data.get("genre_baseline", {})
+                innovation_data = analysis_data.get("innovation", {})
+                baseline_innovation_data = analysis_data.get("baseline_and_innovation", {})
                 
                 # 构建核心玩法文本（合并所有字段）
                 core_gameplay_parts = []
@@ -174,11 +177,53 @@ class ReportGenerator:
                     attraction_parts.append(f"留存因素：{attraction_data['retention_factors']}")
                 
                 attraction = "\n\n".join(attraction_parts) if attraction_parts else "暂无吸引力分析"
+
+                # 构建品类基线 + 创新点（新格式，兼容两种schema）
+                genre_baseline_parts = []
+                # schema A: genre_baseline
+                if isinstance(genre_baseline_data, dict):
+                    if genre_baseline_data.get("base_genre"):
+                        genre_baseline_parts.append(f"基类品类：{genre_baseline_data['base_genre']}")
+                    if genre_baseline_data.get("reference"):
+                        genre_baseline_parts.append(f"参考范式：{genre_baseline_data['reference']}")
+                    if genre_baseline_data.get("baseline_loop"):
+                        genre_baseline_parts.append(f"品类基线循环：{genre_baseline_data['baseline_loop']}")
+                # schema B: baseline_and_innovation
+                if isinstance(baseline_innovation_data, dict):
+                    if baseline_innovation_data.get("base_genre") and not any("基类品类：" in x for x in genre_baseline_parts):
+                        genre_baseline_parts.append(f"基类品类：{baseline_innovation_data['base_genre']}")
+                    if baseline_innovation_data.get("baseline_loop") and not any("品类基线循环：" in x for x in genre_baseline_parts):
+                        genre_baseline_parts.append(f"品类基线循环：{baseline_innovation_data['baseline_loop']}")
+                genre_baseline = "\n\n".join(genre_baseline_parts).strip()
+
+                innovation_parts = []
+                # schema A: innovation
+                if isinstance(innovation_data, dict):
+                    if innovation_data.get("summary"):
+                        innovation_parts.append(f"创新总结：{innovation_data['summary']}")
+                    pts = innovation_data.get("innovation_points")
+                    if isinstance(pts, list) and pts:
+                        innovation_parts.append("创新点：\n" + "\n".join([f"- {str(x).strip()}" for x in pts if str(x).strip()]))
+                    if innovation_data.get("how_it_changes_play"):
+                        innovation_parts.append(f"如何改变玩法：{innovation_data['how_it_changes_play']}")
+                    ev = innovation_data.get("evidence_from_video")
+                    if isinstance(ev, list) and ev:
+                        innovation_parts.append("视频证据：\n" + "\n".join([f"- {str(x).strip()}" for x in ev if str(x).strip()]))
+                    if innovation_data.get("tradeoffs"):
+                        innovation_parts.append(f"代价/风险：{innovation_data['tradeoffs']}")
+                # schema B: baseline_and_innovation（两段式：微调创新）
+                if isinstance(baseline_innovation_data, dict):
+                    pts2 = baseline_innovation_data.get("micro_innovations")
+                    if isinstance(pts2, list) and pts2:
+                        innovation_parts.append("微调创新点：\n" + "\n".join([f"- {str(x).strip()}" for x in pts2 if str(x).strip()]))
+                innovation = "\n\n".join([p for p in innovation_parts if p.strip()]).strip()
             else:
                 # 从文本中提取（兼容旧格式）
                 content = self._extract_core_content(analysis_text)
                 core_gameplay = content["core_gameplay"]
                 attraction = content["attraction"]
+                genre_baseline = ""
+                innovation = ""
             
             game_data = {
                 "index": idx,
@@ -193,6 +238,8 @@ class ReportGenerator:
                 "gdrive_url": analysis.get("gdrive_url", ""),  # Google Drive视频链接
                 "core_gameplay": core_gameplay,
                 "attraction": attraction,
+                "genre_baseline": genre_baseline,
+                "innovation": innovation,
                 "analysis_data": analysis_data,  # 保留结构化数据
                 "full_analysis": analysis_text,  # 保留完整分析文本
                 "analysis_model": model_used,
@@ -247,7 +294,10 @@ class ReportGenerator:
             # 如果有关键词数据，直接使用；否则从文本中提取
             if analysis_data and isinstance(analysis_data, dict):
                 core_gameplay_data = analysis_data.get("core_gameplay", {})
-                attraction_data = analysis_data.get("attraction", {})
+                attraction_data = analysis_data.get("attraction", {})  # 兼容旧格式（可能不存在）
+                genre_baseline_data = analysis_data.get("genre_baseline", {})
+                innovation_data = analysis_data.get("innovation", {})
+                baseline_innovation_data = analysis_data.get("baseline_and_innovation", {})
                 
                 # 构建核心玩法文本
                 core_gameplay_parts = []
@@ -277,41 +327,49 @@ class ReportGenerator:
                 content = self._extract_core_content(analysis_text)
                 core_gameplay = content["core_gameplay"]
                 attraction = content["attraction"]
+                genre_baseline_data = {}
+                innovation_data = {}
             
             # 游戏标题和信息
             game_rank = analysis.get("game_rank", "")
             game_company = analysis.get("game_company", "")
             rank_change = analysis.get("rank_change", "--")
+            # 视频链接：优先跳回抖音分享链接（share_url），否则兜底用 gdrive_url
+            share_url = analysis.get("share_url", "")
             gdrive_url = analysis.get("gdrive_url", "")
             monitor_date = analysis.get("monitor_date", "")
             platform = analysis.get("platform", "")
             source = analysis.get("source", "")
             board_name = analysis.get("board_name", "")
             
-            # 构建游戏信息标题
-            title_parts = [f"**【游戏 {idx}】{game_name}**"]
-            if game_rank:
-                title_parts.append(f"排名：{game_rank}")
-            if game_company:
-                title_parts.append(f"开发公司：{game_company}")
-            if monitor_date:
-                title_parts.append(f"监控日期：{monitor_date}")
-            if platform:
-                title_parts.append(f"平台：{platform}")
-            if source:
-                title_parts.append(f"来源：{source}")
-            if board_name:
-                title_parts.append(f"榜单：{board_name}")
-            if rank_change and rank_change != "--":
-                title_parts.append(f"排名变化：{rank_change}")
-            if gdrive_url:
-                title_parts.append(f"[视频链接]({gdrive_url})")
+            def _ok(v: str) -> bool:
+                return bool(v and str(v).strip() and str(v).strip() not in {"--", "N/A", "None"})
+
+            # 构建游戏信息标题（多行 + 图标 + 加粗标签，增强可读性）
+            title_lines = [f"**【游戏 {idx}】{game_name}**"]
+            if _ok(game_rank):
+                title_lines.append(f"**🏅 排名：** {game_rank}")
+            if _ok(game_company):
+                title_lines.append(f"**🏢 开发公司：** {game_company}")
+            if _ok(platform):
+                title_lines.append(f"**📱 平台：** {platform}")
+            if _ok(source):
+                title_lines.append(f"**🧭 来源：** {source}")
+            if _ok(board_name):
+                title_lines.append(f"**🏷️ 榜单：** {board_name}")
+            if _ok(monitor_date):
+                title_lines.append(f"**🗓️ 监控日期：** {monitor_date}")
+            if _ok(rank_change) and str(rank_change).strip() != "--":
+                title_lines.append(f"**📈 排名变化：** {rank_change}")
+            video_link = share_url if _ok(share_url) else gdrive_url
+            if _ok(video_link):
+                title_lines.append(f"**🔗 视频链接：** [点击查看]({video_link})")
             
             elements.append({
                 "tag": "div",
                 "text": {
                     "tag": "lark_md",
-                    "content": " | ".join(title_parts)
+                    "content": "\n".join(title_lines)
                 }
             })
             
@@ -350,6 +408,118 @@ class ReportGenerator:
                         "text": {
                             "tag": "lark_md",
                             "content": f"**📋 核心玩法解析：**\n{core_gameplay}"
+                        }
+                    })
+
+            # 品类基线（新提示词）
+            if isinstance(genre_baseline_data, dict) and any(
+                genre_baseline_data.get(k) for k in ["base_genre", "reference", "baseline_loop"]
+            ):
+                base_genre = genre_baseline_data.get("base_genre") or ""
+                reference = genre_baseline_data.get("reference") or ""
+                baseline_loop = genre_baseline_data.get("baseline_loop") or ""
+
+                gb_lines = []
+                if base_genre:
+                    gb_lines.append(f"**基类品类：** {base_genre}")
+                if reference:
+                    gb_lines.append(f"**参考范式：** {reference}")
+                if baseline_loop:
+                    gb_lines.append(f"**品类基线循环：** {baseline_loop}")
+
+                elements.append({
+                    "tag": "div",
+                    "text": {
+                        "tag": "lark_md",
+                        "content": "**🧩 品类基线：**\n" + "\n".join(gb_lines)
+                    }
+                })
+
+            # 创新点分析（新提示词）
+            if isinstance(innovation_data, dict) and any(
+                innovation_data.get(k) for k in ["summary", "innovation_points", "how_it_changes_play", "evidence_from_video", "tradeoffs"]
+            ):
+                inv_lines = []
+                if innovation_data.get("summary"):
+                    inv_lines.append(f"**创新总结：** {innovation_data['summary']}")
+                pts = innovation_data.get("innovation_points")
+                if isinstance(pts, list) and pts:
+                    bullets = "\n".join([f"- {str(x).strip()}" for x in pts if str(x).strip()])
+                    if bullets:
+                        inv_lines.append("**创新点：**\n" + bullets)
+                if innovation_data.get("how_it_changes_play"):
+                    inv_lines.append(f"**如何改变玩法：** {innovation_data['how_it_changes_play']}")
+                ev = innovation_data.get("evidence_from_video")
+                if isinstance(ev, list) and ev:
+                    eb = "\n".join([f"- {str(x).strip()}" for x in ev if str(x).strip()])
+                    if eb:
+                        inv_lines.append("**视频证据：**\n" + eb)
+                if innovation_data.get("tradeoffs"):
+                    inv_lines.append(f"**代价/风险：** {innovation_data['tradeoffs']}")
+
+                inv_text = "\n\n".join([x for x in inv_lines if x.strip()]).strip()
+                if inv_text:
+                    # 同样控制单段长度，避免超 2000
+                    if len(inv_text) > 1800:
+                        chunks = []
+                        buf = ""
+                        for block in inv_text.split("\n\n"):
+                            block = block.strip()
+                            if not block:
+                                continue
+                            candidate = block if not buf else (buf + "\n\n" + block)
+                            if len(candidate) <= 1800:
+                                buf = candidate
+                                continue
+                            if buf:
+                                chunks.append(buf)
+                                buf = ""
+                            while len(block) > 1800:
+                                chunks.append(block[:1800])
+                                block = block[1800:]
+                            buf = block
+                        if buf:
+                            chunks.append(buf)
+
+                        for ci, c in enumerate(chunks, 1):
+                            elements.append({
+                                "tag": "div",
+                                "text": {
+                                    "tag": "lark_md",
+                                    "content": f"**💡 创新点分析{'（续）' if ci > 1 else ''}：**\n{c}"
+                                }
+                            })
+                    else:
+                        elements.append({
+                            "tag": "div",
+                            "text": {
+                                "tag": "lark_md",
+                                "content": f"**💡 创新点分析：**\n{inv_text}"
+                            }
+                        })
+
+            # 两段式：基线 + 微调创新（baseline_and_innovation）
+            if isinstance(baseline_innovation_data, dict) and any(
+                baseline_innovation_data.get(k) for k in ["base_genre", "baseline_loop", "micro_innovations"]
+            ):
+                bi_lines = []
+                if baseline_innovation_data.get("base_genre"):
+                    bi_lines.append(f"**基线品类：** {baseline_innovation_data['base_genre']}")
+                if baseline_innovation_data.get("baseline_loop"):
+                    bi_lines.append(f"**基线循环：** {baseline_innovation_data['baseline_loop']}")
+                pts2 = baseline_innovation_data.get("micro_innovations")
+                if isinstance(pts2, list) and pts2:
+                    bullets = "\n".join([f"- {str(x).strip()}" for x in pts2 if str(x).strip()])
+                    if bullets:
+                        bi_lines.append("**微调创新点：**\n" + bullets)
+
+                bi_text = "\n\n".join([x for x in bi_lines if x.strip()]).strip()
+                if bi_text:
+                    elements.append({
+                        "tag": "div",
+                        "text": {
+                            "tag": "lark_md",
+                            "content": f"**🧱 基线与微调创新：**\n{bi_text}"
                         }
                     })
             

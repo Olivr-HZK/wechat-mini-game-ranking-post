@@ -143,7 +143,14 @@ class VideoAnalyzer:
             traceback.print_exc()
             return []
     
-    def analyze_video(self, video_path: str = None, game_name: str = None, game_info: Dict = None, video_url: str = None) -> Optional[Dict]:
+    def analyze_video(
+        self,
+        video_path: str = None,
+        game_name: str = None,
+        game_info: Dict = None,
+        video_url: str = None,
+        force_refresh: bool = False,
+    ) -> Optional[Dict]:
         """
         分析视频内容，提取游戏玩法信息
         
@@ -152,12 +159,13 @@ class VideoAnalyzer:
             game_name: 游戏名称
             game_info: 游戏的其他信息（可选）
             video_url: 视频URL（优先使用，如果不提供则尝试从数据库获取）
+            force_refresh: 是否强制重新分析（忽略数据库中的玩法分析缓存）
         
         Returns:
             分析结果字典，包含玩法解析等信息
         """
         # 首先检查数据库是否已有分析结果
-        if self.use_database and self.db and game_name:
+        if (not force_refresh) and self.use_database and self.db and game_name:
             existing_analysis = self.db.get_gameplay_analysis(game_name)
             if existing_analysis and existing_analysis.get("gameplay_analysis"):
                 print(f"✓ 找到 {game_name} 的已有分析结果（使用数据库缓存）")
@@ -223,49 +231,51 @@ class VideoAnalyzer:
                 use_url = False
             
             # 构建API请求
-            # 要求返回结构化但更加精炼的JSON格式分析
-            prompt = f"""请仔细观察这个游戏视频，进行玩法分析。
+            # 要求返回结构化且可解析的JSON；输出只包含两部分：核心玩法 +（基线品类&相对微调创新）
+            prompt = f"""你是一名“小游戏玩法拆解 & 品类微创新”分析师。
+
+本次只输出两部分：
+1) 核心玩法拆解
+2) 基线游戏类型 + 相较于基线的微调创新点
+
+不要做“吸引力分析/为什么好玩/目标用户/留存点”等内容，也不要输出相关字段。
 
 游戏名称：{game_name}
 游戏类型：{game_info.get('游戏类型', '未知') if game_info else '未知'}
 
-请仔细观看视频内容，然后以JSON格式返回分析结果，格式如下：
+请仔细观看视频内容，然后以JSON格式返回分析结果（严格JSON，可直接解析；只允许下面这两个顶层字段）：
 {{
   "core_gameplay": {{
-    "mechanism": "用一段话整体说明核心玩法机制 + 操作方式 + 基本规则 + 主要特点（合并在一起）",
+    "mechanism": "用一段话整体说明核心玩法机制 + 操作方式 + 基本规则 + 主要特点（合并在一起，尽量精炼）",
     "operation": "可选的简短补充（1-2 句），没有补充可留空字符串",
     "rules": "可选的简短补充（1-2 句），没有补充可留空字符串",
     "features": "可选的简短补充（1-2 句），没有补充可留空字符串"
   }},
-  "attraction": {{
-    "points": "用一段话整合说明：游戏的主要吸引点 + 适合的目标用户类型 + 关键留存因素",
-    "target_audience": "可选的简短人群标签或一句话总结（可留空字符串）",
-    "retention_factors": "可选的简短留存要点（可留空字符串）"
+  "baseline_and_innovation": {{
+    "base_genre": "判断该游戏属于哪类基线品类/基类玩法（例如：三消/合成/塔防/跑酷/射击/IO/解谜/放置/棋牌等；不确定就写“未知”）",
+    "baseline_loop": "用 1 段话概括该品类‘基线范式’的常见核心循环/常见机制（60-120字）",
+    "micro_innovations": [
+      "列出 3-5 条相对基线的微调创新点（每条不超过 30 字，要求具体，不要空泛）"
+    ]
   }}
 }}
 
 重要要求：
-1. **玩法描述策略（仍然保持类比/创新逻辑）**：
-   - 如果该游戏的玩法与市面上主流热门游戏（如王者荣耀、和平精英、原神、英雄联盟、和平精英、我的世界、植物大战僵尸等）类似，请采用类比方式：
-     * 先说明"玩法类似[知名游戏名称]"，例如"玩法类似英雄联盟手游版"或"玩法类似王者荣耀"
-     * 然后用极简洁的方式说明核心玩法机制和操作方式（总字数控制在 120-180 字）
-     * 再补一句概括性的差异和本游戏的独特之处（约 50-80 字）
-   - 如果是一种全新的、创新的玩法：整体描述也尽量收敛在 180-250 字以内，突出最核心的 2-3 个机制即可
-   - 如果玩法是经典类型的变体（如消除类、跑酷类、塔防类等），先说明大类，再点出 2-3 个最有差异化的点
+1. **两段式输出**：只输出 `core_gameplay` 和 `baseline_and_innovation`，不要出现其他顶层字段。
+2. **微创新优先**：先明确基线品类与基线循环，再讲相对基线的“微调创新点”（规则微调/节奏微调/资源微调/关卡结构微调/反馈与操作微调等）。
 
-2. **描述长度控制**：
-   - **core_gameplay.mechanism**：1 段整体文字，推荐 150-220 字，覆盖机制 + 操作 + 规则 + 特点，不要拆得太细、不要赘述
+3. **描述长度控制（简洁但清楚）**：
+   - **core_gameplay.mechanism**：1 段整体文字，推荐 120-180 字，覆盖机制 + 操作 + 规则 + 特点
    - **core_gameplay.operation / rules / features**：如果没有额外信息，可以留空字符串 `""`，有补充时每个字段不超过 50 字
-   - **attraction.points**：1 段整体文字，推荐 150-220 字，同时说明：为什么好玩 + 适合什么玩家 + 主要留存点
-   - **attraction.target_audience / retention_factors**：可以是非常精简的标签或一句话（不超过 40 字），不强制必须填写
+   - **baseline_and_innovation.micro_innovations**：3-5 条，务必具体，不要空泛词（如“玩法创新”“体验更好”）
 
-3. **必须仔细观察视频中的实际游戏画面和操作**
+4. **必须仔细观察视频中的实际游戏画面和操作**
 
-4. **直接返回JSON格式，不要有任何前缀说明文字（如"好的"、"以下是"等）**
+5. **直接返回JSON格式，不要有任何前缀说明文字（如"好的"、"以下是"等）**
 
-5. **确保JSON格式正确，可以被解析**
+6. **确保JSON格式正确，可以被解析**
 
-6. **所有描述都要基于视频中的实际内容，不要编造信息**
+7. **所有描述都要基于视频中的实际内容，不要编造信息**
 
 示例格式（玩法类似知名游戏时，注意结构精简）：
 {{
@@ -275,7 +285,11 @@ class VideoAnalyzer:
     "rules": "",
     "features": ""
   }},
-  ...
+  "baseline_and_innovation": {{
+    "base_genre": "MOBA",
+    "baseline_loop": "选英雄-对线发育-团战推塔-摧毁基地；依赖经济运营与团战推进。",
+    "micro_innovations": ["更短局时长/更快节奏", "走位与技能释放辅助", "更紧凑的地图资源点"]
+  }}
 }}"""
             
             headers = {

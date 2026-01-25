@@ -36,7 +36,9 @@ DOUYIN_HIGH_QUALITY_ENDPOINT = "/api/v1/douyin/app/v3/fetch_video_high_quality_p
 USE_HIGH_QUALITY_API_FALLBACK = os.getenv("USE_HIGH_QUALITY_API_FALLBACK", "true").lower() == "true"  # 普通URL失败时是否使用付费API
 
 # 文件路径配置
-RANKINGS_CSV_PATH = "data/game_rankings.csv"
+# 现在排行榜按“人气榜/畅销榜/畅玩榜”落到各自文件夹；
+# 工作流默认使用“人气榜”里最新日期的CSV（也可通过环境变量覆盖为具体文件/目录）。
+RANKINGS_CSV_PATH = os.getenv("RANKINGS_CSV_PATH", "data/人气榜")
 VIDEOS_DIR = "data/videos"
 VIDEO_INFO_DIR = "data/video_info"  # 保存视频URL和ID的目录
 
@@ -47,3 +49,8 @@ MAX_GAMES_TO_PROCESS = int(os.getenv("MAX_GAMES_TO_PROCESS", "5"))  # 每次处�
 API_REQUEST_DELAY = float(os.getenv("API_REQUEST_DELAY", "1.0"))  # 请求间隔（秒），避免频率过高
 API_MAX_RETRIES = int(os.getenv("API_MAX_RETRIES", "3"))  # 最大重试次数（针对502等临时错误）
 API_RETRY_DELAY = float(os.getenv("API_RETRY_DELAY", "2.0"))  # 重试延迟（秒）
+
+# Google Sheets（游戏排行榜写入）
+GOOGLE_SHEET_ID = os.getenv("GOOGLE_SHEET_ID", "")  # 目标表格 ID 或完整 URL
+GOOGLE_SHEETS_CREDENTIALS = os.getenv("GOOGLE_SHEETS_CREDENTIALS", "")  # OAuth2 凭证 JSON 路径（单独配置，不复用 Drive）
+GOOGLE_SHEETS_TOKEN = os.getenv("GOOGLE_SHEETS_TOKEN", "")  # 可选，token 保存路径；不填则用凭证同目录下的 token_sheets.json

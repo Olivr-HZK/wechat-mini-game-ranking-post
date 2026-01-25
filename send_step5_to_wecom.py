@@ -30,7 +30,8 @@ import config
 from modules.wecom_sender import WeComSender
 
 
-GAME_TITLE_RE = re.compile(r"【游戏\s*(\d+)】\s*([^\*|]+)")
+# 标题行可能是多行内容（比如下面还有平台/来源/日期等），这里只取第一行的游戏名
+GAME_TITLE_RE = re.compile(r"【游戏\s*(\d+)】\s*([^\r\n]+)")
 MD_LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^)]+)\)")
 
 

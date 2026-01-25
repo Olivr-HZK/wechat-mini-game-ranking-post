@@ -17,13 +17,21 @@ import config
 class GameAnalysisWorkflow:
     """游戏分析工作流"""
     
-    def __init__(self):
+    def __init__(
+        self,
+        rankings_csv_path: Optional[str] = None,
+        force_refresh_analysis: bool = False,
+        skip_screenshots: bool = False,
+    ):
         """初始化工作流"""
-        self.rank_extractor = RankExtractor()
+        self.rank_extractor = RankExtractor(csv_path=rankings_csv_path) if rankings_csv_path else RankExtractor()
         self.video_searcher = VideoSearcher()
         self.video_analyzer = VideoAnalyzer()
         self.report_generator = ReportGenerator()
         self.feishu_sender = FeishuSender()
+        # 工作流可选行为
+        self.force_refresh_analysis = bool(force_refresh_analysis)
+        self.skip_screenshots = bool(skip_screenshots)
     
     def _extract_and_upload_screenshot(self, video_path: str, game_name: str) -> Optional[List[str]]:
         """
@@ -236,21 +244,20 @@ class GameAnalysisWorkflow:
         print("【步骤0】检查游戏排行榜CSV文件...")
         try:
             import os
-            csv_path = config.RANKINGS_CSV_PATH
-            
+            extractor = self.rank_extractor
+            csv_path = extractor.get_effective_csv_path()
+
             if not os.path.exists(csv_path):
                 print(f"⚠ CSV文件不存在：{csv_path}")
-                print(f"  请手动创建CSV文件，格式参考：data/game_rankings_template.csv")
+                print("  提示：请先运行 gravity 爬取脚本，生成 data/人气榜/<日期>.csv（或设置环境变量 RANKINGS_CSV_PATH 指向CSV/目录）")
                 return False
             
             # 验证CSV文件格式并统计数量
-            from modules.rank_extractor import RankExtractor
-            extractor = RankExtractor()
             games = extractor.get_top_games(top_n=1)  # 只读取一条验证格式
             
             if not games:
                 print(f"⚠ CSV文件格式不正确或为空：{csv_path}")
-                print(f"  请检查CSV文件格式，参考：data/game_rankings_template.csv")
+                print("  提示：当前工作流默认读取 data/人气榜 下最新CSV；请确保表头包含：排名,游戏名称,游戏类型,...")
                 return False
             
             # 统计总游戏数量（读取所有数据）
@@ -286,6 +293,37 @@ class GameAnalysisWorkflow:
             return None
         
         print(f"成功提取 {len(games)} 个游戏")
+
+        # 将排行榜字段写入数据库（A方式：覆盖排行榜字段，不影响视频/截图/玩法分析字段）
+        def _none_if_placeholder(v):
+            if v is None:
+                return None
+            s = str(v).strip()
+            if not s or s in {"--", "N/A", "None"}:
+                return None
+            return s
+
+        if getattr(self, "video_searcher", None) and self.video_searcher.use_database and self.video_searcher.db:
+            for g in games:
+                try:
+                    game_name = (g.get("游戏名称") or "").strip()
+                    if not game_name:
+                        continue
+                    self.video_searcher.db.save_game(
+                        {
+                            "game_name": game_name,
+                            "game_rank": _none_if_placeholder(g.get("排名")),
+                            "game_company": _none_if_placeholder(g.get("开发公司")),
+                            "rank_change": _none_if_placeholder(g.get("排名变化")),
+                            "platform": _none_if_placeholder(g.get("平台")),
+                            "source": _none_if_placeholder(g.get("来源")),
+                            "board_name": _none_if_placeholder(g.get("榜单")),
+                            "monitor_date": _none_if_placeholder(g.get("监控日期")),
+                        }
+                    )
+                except Exception:
+                    # 写库失败不应阻断工作流（后续仍可从CSV读取）
+                    continue
         
         # 保存中间产物
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -320,6 +358,32 @@ class GameAnalysisWorkflow:
             game_name = game.get('游戏名称', '未知游戏')
             game_type = game.get('游戏类型')  # 保存原始的游戏类型信息
             print(f"\n处理游戏 {idx}/{len(games)}: {game_name}")
+
+            def _none_if_placeholder(v):
+                if v is None:
+                    return None
+                s = str(v).strip()
+                if not s or s in {"--", "N/A", "None"}:
+                    return None
+                return s
+
+            # 先把排行榜字段落库（避免后续只跑step2时数据库缺少公司/来源/监控日期等信息）
+            if self.video_searcher.use_database and self.video_searcher.db:
+                try:
+                    self.video_searcher.db.save_game(
+                        {
+                            "game_name": game_name,
+                            "game_rank": _none_if_placeholder(csv_game.get("排名")),
+                            "game_company": _none_if_placeholder(csv_game.get("开发公司")),
+                            "rank_change": _none_if_placeholder(csv_game.get("排名变化")),
+                            "platform": _none_if_placeholder(csv_game.get("平台")),
+                            "source": _none_if_placeholder(csv_game.get("来源")),
+                            "board_name": _none_if_placeholder(csv_game.get("榜单")),
+                            "monitor_date": _none_if_placeholder(csv_game.get("监控日期")),
+                        }
+                    )
+                except Exception:
+                    pass
             
             # 检查数据库中是否已有视频
             video_info = None
@@ -386,7 +450,11 @@ class GameAnalysisWorkflow:
                     game_info.update({
                         "aweme_id": video_info.get("aweme_id"),
                         "gdrive_url": video_info.get("gdrive_url"),
-                        "local_path": video_info.get("local_path")
+                        "local_path": video_info.get("local_path"),
+                        # 透传抖音原始分享链接（用于报告“点击查看”跳回抖音）
+                        "share_url": video_info.get("share_url"),
+                        "original_video_url": video_info.get("original_video_url"),
+                        "video_url": video_info.get("video_url"),
                     })
                 
                 video_results.append({
@@ -396,6 +464,8 @@ class GameAnalysisWorkflow:
                     "video_path": video_path,
                     "video_url": video_url,
                     "gdrive_url": video_url,  # 明确保存gdrive_url
+                    "share_url": (video_info.get("share_url") if isinstance(video_info, dict) else None),
+                    "original_video_url": (video_info.get("original_video_url") if isinstance(video_info, dict) else None),
                     "aweme_id": aweme_id
                 })
         
@@ -432,7 +502,9 @@ class GameAnalysisWorkflow:
             game_name = video_result.get("game_name", "未知游戏")
             video_url = video_result.get("video_url")
             video_path = video_result.get("video_path")
-            video_info = video_result.get("video_info", {})
+            # 重要：提示词需要“游戏类型”等榜单字段，优先使用 step2 组装好的 game_info（来自CSV）
+            csv_game_info = video_result.get("game_info", {}) or {}
+            video_info = video_result.get("video_info", {}) or {}
             
             print(f"\n处理游戏 {idx}/{len(video_results)}: {game_name}")
             
@@ -448,29 +520,31 @@ class GameAnalysisWorkflow:
             analysis = self.video_analyzer.analyze_video(
                 video_path=None,
                 game_name=game_name,
-                game_info=video_info,
-                video_url=video_url
+                game_info=csv_game_info if isinstance(csv_game_info, dict) and csv_game_info else video_info,
+                video_url=video_url,
+                force_refresh=bool(getattr(self, "force_refresh_analysis", False)),
             )
             
             if analysis:
-                # 提取并上传截图
-                screenshot_keys = None
-                if self.video_searcher.use_database and self.video_searcher.db:
-                    screenshot_keys = self.video_searcher.db.get_screenshot_key(game_name)
-                    if screenshot_keys:
-                        print(f"  ✓ 从数据库找到截图image_key（共{len(screenshot_keys)}张）")
-                    elif video_path and os.path.exists(video_path):
-                        screenshot_keys = self._extract_and_upload_screenshot(video_path, game_name)
+                # 暂时不需要截图：默认可通过 --skip-screenshots 跳过截图提取/上传
+                if not bool(getattr(self, "skip_screenshots", False)):
+                    screenshot_keys = None
+                    if self.video_searcher.use_database and self.video_searcher.db:
+                        screenshot_keys = self.video_searcher.db.get_screenshot_key(game_name)
                         if screenshot_keys:
-                            self.video_searcher.db.update_screenshot_key(game_name, screenshot_keys)
-                            print(f"  ✓ 已上传游戏截图到飞书并保存到数据库（共{len(screenshot_keys)}张）")
-                
-                if screenshot_keys:
-                    analysis["screenshot_image_keys"] = screenshot_keys
-                    analysis["screenshot_image_key"] = screenshot_keys[0] if screenshot_keys else None
+                            print(f"  ✓ 从数据库找到截图image_key（共{len(screenshot_keys)}张）")
+                        elif video_path and os.path.exists(video_path):
+                            screenshot_keys = self._extract_and_upload_screenshot(video_path, game_name)
+                            if screenshot_keys:
+                                self.video_searcher.db.update_screenshot_key(game_name, screenshot_keys)
+                                print(f"  ✓ 已上传游戏截图到飞书并保存到数据库（共{len(screenshot_keys)}张）")
+                    
+                    if screenshot_keys:
+                        analysis["screenshot_image_keys"] = screenshot_keys
+                        analysis["screenshot_image_key"] = screenshot_keys[0] if screenshot_keys else None
                 
                 # 添加游戏信息和视频信息
-                game_info = video_result.get("game_info", {})
+                game_info = csv_game_info if isinstance(csv_game_info, dict) else {}
                 analysis["game_rank"] = game_info.get("排名", "")
                 analysis["game_company"] = game_info.get("开发公司", "")
                 analysis["rank_change"] = game_info.get("排名变化", "--")
@@ -480,6 +554,11 @@ class GameAnalysisWorkflow:
                 analysis["source"] = game_info.get("来源", "")
                 analysis["board_name"] = game_info.get("榜单", "")
                 analysis["gdrive_url"] = video_result.get("gdrive_url", video_url)
+                # 报告里“点击查看”优先使用抖音分享链接
+                if isinstance(video_info, dict):
+                    analysis["share_url"] = video_info.get("share_url", "") or game_info.get("share_url", "")
+                    analysis["original_video_url"] = video_info.get("original_video_url", "") or game_info.get("original_video_url", "")
+                    analysis["video_url"] = video_info.get("video_url", "") or game_info.get("video_url", "")
                 
                 analyses.append(analysis)
                 print(f"✓ 完成分析：{game_name}")
@@ -854,6 +933,7 @@ class GameAnalysisWorkflow:
 def main():
     """主函数"""
     import argparse
+    from pathlib import Path
     
     parser = argparse.ArgumentParser(
         description='小游戏热榜玩法解析日报工作流',
@@ -884,10 +964,34 @@ def main():
                         help='要执行的步骤，用逗号分隔，如：0,1,2,3,4,5')
     parser.add_argument('--step', type=int,
                         help='只执行单个步骤（0-5）')
+    parser.add_argument('--rankings-csv', type=str, default="",
+                        help='指定输入排行榜CSV文件路径（或目录）；用于切换到周榜/月榜CSV。优先级最高。')
+    parser.add_argument('--use-latest-weekly', action='store_true',
+                        help='自动选择 data/人气榜 下最新的“周榜CSV”（文件名包含 ~），不指定 --rankings-csv 时生效。')
+    parser.add_argument('--force-refresh-analysis', action='store_true',
+                        help='强制重新分析：忽略数据库中已有的玩法分析缓存（使用最新提示词重新生成并覆盖）')
+    parser.add_argument('--skip-screenshots', action='store_true',
+                        help='跳过截图提取/上传（当前提示词/报告不依赖截图时推荐开启）')
     
     args = parser.parse_args()
     
-    workflow = GameAnalysisWorkflow()
+    rankings_csv_path = (args.rankings_csv or "").strip() or None
+    if rankings_csv_path is None and args.use_latest_weekly:
+        try:
+            base_dir = Path("data") / "人气榜"
+            if base_dir.exists() and base_dir.is_dir():
+                weekly_files = list(base_dir.glob("*~*.csv"))
+                if weekly_files:
+                    weekly_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    rankings_csv_path = str(weekly_files[0])
+        except Exception:
+            rankings_csv_path = None
+
+    workflow = GameAnalysisWorkflow(
+        rankings_csv_path=rankings_csv_path,
+        force_refresh_analysis=bool(args.force_refresh_analysis),
+        skip_screenshots=bool(args.skip_screenshots),
+    )
     
     # 如果只爬取
     if args.scrape_only:

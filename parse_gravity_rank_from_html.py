@@ -319,7 +319,7 @@ def write_csv(
     *,
     monitor_date: str = "",
     platform: str = "",
-    source: str = "榜单",
+    source: str = "引力引擎",
     board_name: str = "",
 ) -> None:
     output_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -331,8 +331,8 @@ def write_csv(
         "游戏类型",
         "标签",
         "热度指数",
-        "平台",      # vx / dy（或你自定义）
-        "来源",      # 榜单
+        "平台",      # 例如：微信小游戏
+        "来源",      # 例如：引力引擎
         "榜单",      # 月榜1/月榜2/月榜3（或自定义名称）
         "监控日期",  # YYYY-MM-DD
         "发布时间",
@@ -357,8 +357,8 @@ def write_csv(
                     "游戏类型": game_type,
                     "标签": tags_joined,
                     "热度指数": heat(r) if r else "",
-                    "平台": platform or "vx",
-                    "来源": source or "榜单",
+                    "平台": platform or "微信小游戏",
+                    "来源": source or "引力引擎",
                     "榜单": board_name or "",
                     "监控日期": monitor_date or "",
                     "发布时间": it.publish_days,
@@ -391,11 +391,10 @@ def main() -> int:
     ap.add_argument("--per-board", type=int, default=20, help="每个榜单条数（默认 20）")
     ap.add_argument(
         "--platform",
-        choices=["vx", "dy"],
-        default="vx",
-        help="平台标识（默认 vx；抖音可用 dy）",
+        default="微信小游戏",
+        help="平台字段（默认 微信小游戏）",
     )
-    ap.add_argument("--source", default="榜单", help="来源字段（默认 榜单）")
+    ap.add_argument("--source", default="引力引擎", help="来源字段（默认 引力引擎）")
     ap.add_argument(
         "--monitor-date",
         default="",

@@ -53,6 +53,10 @@ class VideoDatabase:
                 game_rank TEXT,
                 game_company TEXT,
                 rank_change TEXT,
+                platform TEXT,       -- 平台（例如：微信小游戏 / 抖音）
+                source TEXT,         -- 来源（例如：引力引擎）
+                board_name TEXT,     -- 榜单名称（例如：微信小游戏人气榜）
+                monitor_date TEXT,   -- 监控日期（YYYY-MM-DD）
                 aweme_id TEXT,
                 title TEXT,
                 description TEXT,
@@ -98,6 +102,10 @@ class VideoDatabase:
             ("game_rank", "TEXT"),
             ("game_company", "TEXT"),
             ("rank_change", "TEXT"),
+            ("platform", "TEXT"),
+            ("source", "TEXT"),
+            ("board_name", "TEXT"),
+            ("monitor_date", "TEXT"),
             ("relevance_score", "INTEGER DEFAULT 0"),
             ("gameplay_analysis", "TEXT"),
             ("analysis_model", "TEXT"),
@@ -273,6 +281,10 @@ class VideoDatabase:
                         game_rank = COALESCE(?, game_rank),
                         game_company = COALESCE(?, game_company),
                         rank_change = COALESCE(?, rank_change),
+                        platform = COALESCE(?, platform),
+                        source = COALESCE(?, source),
+                        board_name = COALESCE(?, board_name),
+                        monitor_date = COALESCE(?, monitor_date),
                         aweme_id = COALESCE(?, aweme_id),
                         title = COALESCE(?, title),
                         description = COALESCE(?, description),
@@ -301,6 +313,10 @@ class VideoDatabase:
                     game_info.get("game_rank"),
                     game_info.get("game_company"),
                     game_info.get("rank_change"),
+                    game_info.get("platform"),
+                    game_info.get("source"),
+                    game_info.get("board_name"),
+                    game_info.get("monitor_date"),
                     game_info.get("aweme_id"),
                     game_info.get("title"),
                     game_info.get("description"),
@@ -330,6 +346,7 @@ class VideoDatabase:
                 cursor.execute('''
                     INSERT INTO games (
                         game_name, game_rank, game_company, rank_change,
+                        platform, source, board_name, monitor_date,
                         aweme_id, title, description,
                         video_url, video_urls, cover_url,
                         author_uid, duration,
@@ -337,12 +354,16 @@ class VideoDatabase:
                         create_time, share_url, original_video_url, gdrive_url, gdrive_file_id,
                         local_path, downloaded, search_keyword, relevance_score,
                         gameplay_analysis, analysis_model, analyzed_at, screenshot_image_key
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     game_name,
                     game_info.get("game_rank"),
                     game_info.get("game_company"),
                     game_info.get("rank_change"),
+                    game_info.get("platform"),
+                    game_info.get("source"),
+                    game_info.get("board_name"),
+                    game_info.get("monitor_date"),
                     game_info.get("aweme_id"),
                     game_info.get("title"),
                     game_info.get("description"),
@@ -377,7 +398,17 @@ class VideoDatabase:
             print(f"保存游戏到数据库时出错：{str(e)}")
             return False
     
-    def update_game_ranking(self, game_name: str, game_rank: str = None, game_company: str = None, rank_change: str = None) -> bool:
+    def update_game_ranking(
+        self,
+        game_name: str,
+        game_rank: str = None,
+        game_company: str = None,
+        rank_change: str = None,
+        platform: str = None,
+        source: str = None,
+        board_name: str = None,
+        monitor_date: str = None,
+    ) -> bool:
         """
         更新游戏的排名信息
         
@@ -406,6 +437,18 @@ class VideoDatabase:
             if rank_change is not None:
                 updates.append("rank_change = ?")
                 params.append(rank_change)
+            if platform is not None:
+                updates.append("platform = ?")
+                params.append(platform)
+            if source is not None:
+                updates.append("source = ?")
+                params.append(source)
+            if board_name is not None:
+                updates.append("board_name = ?")
+                params.append(board_name)
+            if monitor_date is not None:
+                updates.append("monitor_date = ?")
+                params.append(monitor_date)
             
             if not updates:
                 conn.close()
