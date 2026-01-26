@@ -95,25 +95,40 @@ python main.py --skip-scrape
 python main.py --scrape-only
 ```
 
+### 选择平台
+
+通过 `--platform` 参数选择抖音或微信小游戏榜单：
+
+```bash
+# 选择抖音小游戏榜单
+python main.py --platform dy
+
+# 选择微信小游戏榜单
+python main.py --platform wx
+
+# 默认不限制，选择最新的CSV文件
+python main.py
+```
+
 ### 单独执行视频搜索
 
 使用独立的视频搜索脚本，只执行视频搜索功能：
 
 ```bash
 # 从排行榜搜索前5个游戏的视频
-python search_videos.py --top 5
+python scripts/tools/search_videos.py --top 5
 
 # 搜索单个游戏的视频
-python search_videos.py --game "羊了个羊"
+python scripts/tools/search_videos.py --game "羊了个羊"
 
 # 搜索并下载视频
-python search_videos.py --top 3 --download
+python scripts/tools/search_videos.py --top 3 --download
 
 # 每个游戏搜索多个结果
-python search_videos.py --top 5 --max-results 3
+python scripts/tools/search_videos.py --top 5 --max-results 3
 
 # 查看帮助
-python search_videos.py --help
+python scripts/tools/search_videos.py --help
 ```
 
 **视频搜索脚本参数说明：**
@@ -141,49 +156,138 @@ python search_videos.py --help
 
 ### 排行榜数据
 
-排行榜数据存储在 `data/game_rankings.csv`，格式如下：
+排行榜数据存储在 `data/人气榜/` 目录下，支持两种平台：
+- **抖音小游戏**：文件名以 `dy_` 开头（如 `dy_2026-1-19~2026-1-25.csv`）
+- **微信小游戏**：普通文件名（如 `2026-1-19~2026-1-25.csv`）
+
+CSV文件格式包含以下字段：
 - 排名
 - 游戏名称
 - 游戏类型
+- 标签
 - 热度指数
 - 平台
+- 来源
+- 榜单
+- 监控日期
 - 发布时间
+- 开发公司
+- 排名变化
 
 ## 工作流程
 
-1. **提取排行榜** → 从CSV文件读取游戏信息
-2. **搜索下载视频** → 为每个游戏搜索并下载相关视频
-3. **分析视频** → 使用AI模型分析游戏玩法
-4. **生成日报** → 将所有分析结果整合成日报
-5. **发送日报** → 通过飞书机器人发送日报
+完整工作流包含以下步骤：
 
-## 文件结构
+1. **步骤0：爬取排行榜** → 从引力引擎网站爬取游戏排行榜（可选，可使用现有CSV）
+2. **步骤1：提取排行榜** → 从CSV文件读取游戏信息
+3. **步骤2：搜索下载视频** → 为每个游戏搜索并下载相关视频
+4. **步骤3：分析视频** → 使用AI模型分析游戏玩法
+5. **步骤4：生成日报** → 将所有分析结果整合成日报
+6. **步骤5：发送日报** → 通过飞书机器人发送日报
+
+可以通过 `--steps` 参数指定执行的步骤：
+
+```bash
+# 只执行步骤1和2
+python main.py --steps 1,2
+
+# 只执行步骤3
+python main.py --step 3
+```
+
+## 项目结构
 
 ```
 .
-├── main.py                 # 主程序入口
-├── config.py              # 配置文件
-├── requirements.txt       # Python依赖
-├── README.md             # 说明文档
-├── modules/              # 功能模块
+├── main.py                    # 主程序入口（工作流）
+├── config.py                  # 配置文件
+├── requirements.txt           # Python依赖
+├── README.md                  # 说明文档
+├── env_example.txt            # 环境变量示例
+│
+├── modules/                   # 核心功能模块
 │   ├── __init__.py
-│   ├── rank_extractor.py    # 排行提取
-│   ├── video_searcher.py    # 视频搜索下载
-│   ├── video_analyzer.py    # 视频分析
-│   ├── report_generator.py  # 日报生成
-│   └── feishu_sender.py     # 飞书发送
-└── data/                 # 数据目录
-    ├── game_rankings.csv    # 游戏排行榜数据
-    ├── videos/              # 视频文件目录
-    └── report_*.md          # 生成的日报文件
+│   ├── rank_extractor.py      # 排行提取
+│   ├── video_searcher.py      # 视频搜索下载
+│   ├── video_analyzer.py      # 视频分析
+│   ├── report_generator.py    # 日报生成
+│   ├── feishu_sender.py       # 飞书发送
+│   ├── wecom_sender.py        # 企业微信发送
+│   ├── database.py            # 数据库操作
+│   ├── gdrive_uploader.py     # Google Drive上传
+│   ├── GravityScraper.py      # 引力引擎爬虫
+│   └── DEScraper.py           # DataEye爬虫
+│
+├── scripts/                   # 脚本目录
+│   ├── scrapers/              # 爬取脚本
+│   │   ├── scrape_weekly_popularity.py    # 爬取周榜
+│   │   ├── scrape_gravity.py              # 爬取引力引擎
+│   │   ├── scrape_and_parse_gravity.py    # 爬取并解析
+│   │   ├── parse_gravity_rank_from_html.py
+│   │   ├── parse_gravity_rank_text.py
+│   │   └── debug_gravity_page.py
+│   │
+│   ├── tools/                 # 工具脚本
+│   │   ├── search_videos.py                # 视频搜索工具
+│   │   ├── upload_existing_videos_to_gdrive.py
+│   │   ├── update_game_info.py
+│   │   ├── write_rankings_to_google_sheet.py
+│   │   ├── re_search_videos.py
+│   │   └── migrate_database.py
+│   │
+│   ├── tests/                 # 测试脚本
+│   │   ├── test_download.py
+│   │   ├── test_video_analysis.py
+│   │   ├── test_report.py
+│   │   └── ...
+│   │
+│   ├── utils/                 # 工具/清理脚本
+│   │   ├── clear_database.py
+│   │   ├── clear_all_gameplay_videos.py
+│   │   ├── delete_game_data.py
+│   │   └── ...
+│   │
+│   └── senders/               # 发送脚本
+│       ├── send_single_game_to_feishu.py
+│       ├── send_single_game_to_wecom.py
+│       └── ...
+│
+├── docs/                      # 文档目录
+│   ├── WORKFLOW_GUIDE.md      # 工作流指南
+│   ├── GOOGLE_DRIVE_SETUP.md  # Google Drive设置
+│   ├── GRAVITY_SCRAPER_README.md
+│   └── ...
+│
+└── data/                      # 数据目录
+    ├── 人气榜/                 # 排行榜CSV文件
+    │   ├── dy_*.csv           # 抖音小游戏榜单
+    │   └── *.csv              # 微信小游戏榜单
+    ├── videos/                # 视频文件目录
+    ├── videos.db              # SQLite数据库
+    └── step*_*.json           # 工作流中间产物
 ```
 
-## 测试下载功能
+## 其他脚本使用
+
+### 爬取排行榜
+
+```bash
+# 爬取周榜（默认微信小游戏）
+python scripts/scrapers/scrape_weekly_popularity.py
+
+# 爬取抖音小游戏周榜
+python scripts/scrapers/scrape_weekly_popularity.py --platform douyin
+
+# 爬取引力引擎排行榜
+python scripts/scrapers/scrape_gravity.py
+```
+
+### 测试功能
 
 运行测试脚本测试视频搜索和下载：
 
 ```bash
-python test_download.py
+python scripts/tests/test_download.py
 ```
 
 这个脚本会：
@@ -191,6 +295,29 @@ python test_download.py
 2. 搜索每个游戏的视频（筛选：1分钟以内，玩法演示）
 3. 下载找到的视频
 4. 显示数据库统计信息
+
+### 工具脚本
+
+```bash
+# 上传已有视频到Google Drive
+python scripts/tools/upload_existing_videos_to_gdrive.py
+
+# 更新游戏信息
+python scripts/tools/update_game_info.py
+
+# 写入排行榜到Google Sheet
+python scripts/tools/write_rankings_to_google_sheet.py
+```
+
+### 清理脚本
+
+```bash
+# 清理数据库
+python scripts/utils/clear_database.py
+
+# 删除指定游戏数据
+python scripts/utils/delete_game_data.py "游戏名称"
+```
 
 ## 注意事项
 

@@ -4,6 +4,7 @@
 """
 import sys
 import os
+import time
 from datetime import datetime
 from typing import Optional, List, Dict
 from modules.rank_extractor import RankExtractor
@@ -22,9 +23,20 @@ class GameAnalysisWorkflow:
         rankings_csv_path: Optional[str] = None,
         force_refresh_analysis: bool = False,
         skip_screenshots: bool = False,
+        platform: Optional[str] = None,
+        send_to: Optional[str] = None,
     ):
-        """初始化工作流"""
-        self.rank_extractor = RankExtractor(csv_path=rankings_csv_path) if rankings_csv_path else RankExtractor()
+        """
+        初始化工作流
+        
+        Args:
+            rankings_csv_path: CSV文件路径
+            force_refresh_analysis: 是否强制刷新分析
+            skip_screenshots: 是否跳过截图
+            platform: 平台类型，'dy'表示抖音，'wx'表示微信小游戏，None表示不限制
+            send_to: 发送目标，'feishu'/'wecom'/'sheets'/'all'，None表示默认（飞书）
+        """
+        self.rank_extractor = RankExtractor(csv_path=rankings_csv_path, platform=platform) if rankings_csv_path else RankExtractor(platform=platform)
         self.video_searcher = VideoSearcher()
         self.video_analyzer = VideoAnalyzer()
         self.report_generator = ReportGenerator()
@@ -32,6 +44,7 @@ class GameAnalysisWorkflow:
         # 工作流可选行为
         self.force_refresh_analysis = bool(force_refresh_analysis)
         self.skip_screenshots = bool(skip_screenshots)
+        self.send_to = send_to or 'feishu'  # 默认发送到飞书
     
     def _extract_and_upload_screenshot(self, video_path: str, game_name: str) -> Optional[List[str]]:
         """
@@ -248,8 +261,14 @@ class GameAnalysisWorkflow:
             csv_path = extractor.get_effective_csv_path()
 
             if not os.path.exists(csv_path):
-                print(f"⚠ CSV文件不存在：{csv_path}")
+                platform_hint = ""
+                if self.rank_extractor.platform:
+                    platform_name = "抖音" if self.rank_extractor.platform == 'dy' else "微信小游戏"
+                    platform_hint = f"（当前选择平台：{platform_name}）"
+                print(f"⚠ CSV文件不存在：{csv_path}{platform_hint}")
                 print("  提示：请先运行 gravity 爬取脚本，生成 data/人气榜/<日期>.csv（或设置环境变量 RANKINGS_CSV_PATH 指向CSV/目录）")
+                if self.rank_extractor.platform:
+                    print(f"  提示：使用 --platform dy 选择抖音榜单，--platform wx 选择微信小游戏榜单")
                 return False
             
             # 验证CSV文件格式并统计数量
@@ -264,7 +283,11 @@ class GameAnalysisWorkflow:
             all_games = extractor.get_top_games(top_n=None)
             game_count = len(all_games) if all_games else 0
             
-            print(f"✓ CSV文件检查通过：{csv_path}")
+            platform_info = ""
+            if self.rank_extractor.platform:
+                platform_name = "抖音" if self.rank_extractor.platform == 'dy' else "微信小游戏"
+                platform_info = f"（平台：{platform_name}）"
+            print(f"✓ CSV文件检查通过：{csv_path}{platform_info}")
             print(f"  文件包含 {game_count} 个游戏\n")
             return True
         except Exception as e:
@@ -611,37 +634,380 @@ class GameAnalysisWorkflow:
     
     def step5_send_report(self, analyses: List[Dict]) -> bool:
         """
-        步骤5：发送日报到飞书
+        步骤5：发送日报到指定目标（飞书/企业微信/Google Sheets）
         
         Args:
             analyses: 分析结果列表
         
         Returns:
-            是否发送成功
+            是否发送成功（如果发送到多个目标，只要有一个成功就返回True）
         """
-        print("【步骤5】发送日报到飞书...")
-        feishu_report = self.report_generator.generate_feishu_format(analyses)
+        send_to = getattr(self, 'send_to', 'feishu') or 'feishu'
         
-        # 保存发送前的卡片数据
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_file = f"data/step5_feishu_card_{timestamp}.json"
-        try:
-            os.makedirs("data", exist_ok=True)
-            import json
-            with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(feishu_report, f, ensure_ascii=False, indent=2)
-            print(f"  飞书卡片数据已保存到：{output_file}")
-        except Exception as e:
-            print(f"  保存飞书卡片数据失败：{str(e)}")
-        
-        success = self.feishu_sender.send_card(feishu_report)
-        
-        if success:
-            print("✓ 日报发送成功\n")
+        # 支持多个目标：all, feishu, wecom, sheets
+        targets = []
+        if send_to == 'all':
+            targets = ['feishu', 'wecom', 'sheets']
         else:
-            print("✗ 日报发送失败（请检查飞书Webhook配置）\n")
+            targets = [send_to]
         
-        return success
+        overall_success = False
+        
+        # 生成飞书格式报告（用于飞书和企业微信）
+        feishu_report = None
+        if 'feishu' in targets or 'wecom' in targets:
+            feishu_report = self.report_generator.generate_feishu_format(analyses)
+            
+            # 保存发送前的卡片数据
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            output_file = f"data/step5_feishu_card_{timestamp}.json"
+            try:
+                os.makedirs("data", exist_ok=True)
+                import json
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    json.dump(feishu_report, f, ensure_ascii=False, indent=2)
+                print(f"  飞书卡片数据已保存到：{output_file}")
+            except Exception as e:
+                print(f"  保存飞书卡片数据失败：{str(e)}")
+        
+        # 发送到飞书
+        if 'feishu' in targets:
+            print("【步骤5】发送日报到飞书...")
+            success = self._send_to_feishu(feishu_report)
+            if success:
+                overall_success = True
+                print("✓ 飞书发送成功\n")
+            else:
+                print("✗ 飞书发送失败（请检查飞书Webhook配置）\n")
+        
+        # 发送到企业微信
+        if 'wecom' in targets:
+            print("【步骤5】发送日报到企业微信...")
+            success = self._send_to_wecom(feishu_report)
+            if success:
+                overall_success = True
+                print("✓ 企业微信发送成功\n")
+            else:
+                print("✗ 企业微信发送失败（请检查企业微信Webhook配置）\n")
+        
+        # 发送到Google Sheets
+        if 'sheets' in targets:
+            print("【步骤5】写入日报到Google Sheets...")
+            success = self._send_to_sheets(analyses)
+            if success:
+                overall_success = True
+                print("✓ Google Sheets写入成功\n")
+            else:
+                print("✗ Google Sheets写入失败（请检查Google Sheets配置）\n")
+        
+        return overall_success
+    
+    def _send_to_feishu(self, feishu_report: Dict) -> bool:
+        """发送到飞书"""
+        if not feishu_report:
+            return False
+        return self.feishu_sender.send_card(feishu_report)
+    
+    def _send_to_wecom(self, feishu_report: Dict) -> bool:
+        """发送到企业微信（使用send_step5_to_wecom.py的逻辑）"""
+        if not feishu_report:
+            return False
+        
+        try:
+            # 导入send_step5_to_wecom中的函数
+            # 由于send_step5_to_wecom.py使用了from __future__ import annotations，需要使用动态导入
+            import sys
+            from pathlib import Path
+            import importlib.util
+            
+            # 获取项目根目录
+            project_root = Path(__file__).parent
+            wecom_module_path = project_root / "scripts" / "senders" / "send_step5_to_wecom.py"
+            
+            # 确保项目根目录在sys.path中
+            if str(project_root) not in sys.path:
+                sys.path.insert(0, str(project_root))
+            
+            # 动态导入模块（避免__future__导入问题）
+            spec = importlib.util.spec_from_file_location("send_step5_to_wecom", str(wecom_module_path))
+            wecom_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(wecom_module)
+            
+            # 提取需要的函数和类
+            chunk_text = wecom_module.chunk_text
+            extract_sections_from_step5 = wecom_module.extract_sections_from_step5
+            get_feishu_tenant_access_token = wecom_module.get_feishu_tenant_access_token
+            download_feishu_image_bytes = wecom_module.download_feishu_image_bytes
+            
+            from modules.wecom_sender import WeComSender
+            import config
+            
+            # 获取企业微信webhook URL
+            wecom_webhook = config.WECOM_WEBHOOK_URL or ""
+            if not wecom_webhook:
+                print("  警告：未配置企业微信Webhook URL (WECOM_WEBHOOK_URL)")
+                return False
+            
+            # 创建发送器（使用与send_step5_to_wecom相同的配置）
+            sender = WeComSender(
+                wecom_webhook,
+                min_interval_seconds=3.2,
+                max_retries=3,
+                retry_base_seconds=15.0,
+            )
+            
+            # 使用send_step5_to_wecom的逻辑提取内容
+            header_text, games = extract_sections_from_step5(feishu_report)
+            
+            # 发送头部信息
+            if header_text:
+                header_chunks = chunk_text(header_text, max_len=3800)
+                for chunk in header_chunks:
+                    sender.send_markdown(chunk)
+            
+            # 准备飞书token（用于下载图片）
+            app_id = config.FEISHU_APP_ID or ""
+            app_secret = config.FEISHU_APP_SECRET or ""
+            token = None
+            if app_id and app_secret:
+                try:
+                    token = get_feishu_tenant_access_token(app_id, app_secret)
+                except Exception as e:
+                    print(f"  警告：获取飞书token失败，将跳过图片发送：{e}")
+            
+            # 逐游戏发送：文字(分段) -> 中间截图(单独 image)
+            failed_images = []
+            for g in games:
+                text = g.merged_text()
+                text_chunks = chunk_text(text, max_len=3800)
+                
+                # 发送文字内容
+                for chunk in text_chunks:
+                    sender.send_markdown(chunk)
+                
+                # 发送中间截图（如果存在）
+                if g.middle_img_key and token:
+                    try:
+                        img_bytes = download_feishu_image_bytes(g.middle_img_key, token)
+                        sender.send_image_bytes(img_bytes)
+                    except Exception as e:
+                        failed_images.append((g.index, g.name, g.middle_img_key))
+                        print(f"  [!] 游戏{g.index}《{g.name}》中间截图发送失败：{e}")
+                        # 频控场景下给一点缓冲
+                        time.sleep(5)
+            
+            if failed_images:
+                print("  [!] 以下游戏的中间截图未发送成功：")
+                for idx, name, key in failed_images:
+                    print(f"    - 游戏{idx}《{name}》 img_key={key}")
+            
+            return True
+            
+        except ImportError as e:
+            print(f"  错误：无法导入必要的模块：{e}")
+            import traceback
+            traceback.print_exc()
+            return False
+        except Exception as e:
+            print(f"  发送到企业微信时出错：{str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    
+    def _send_to_sheets(self, analyses: List[Dict]) -> bool:
+        """发送到Google Sheets"""
+        try:
+            import config
+            
+            # 检查配置
+            if not config.GOOGLE_SHEET_ID:
+                print("  警告：未配置Google Sheet ID (GOOGLE_SHEET_ID)")
+                return False
+            if not config.GOOGLE_SHEETS_CREDENTIALS:
+                print("  警告：未配置Google Sheets凭证 (GOOGLE_SHEETS_CREDENTIALS)")
+                return False
+            
+            # 尝试导入Google Sheets相关库
+            try:
+                from google.oauth2.credentials import Credentials
+                from google.oauth2 import service_account
+                from google_auth_oauthlib.flow import InstalledAppFlow
+                from google.auth.transport.requests import Request
+                from googleapiclient.discovery import build
+            except ImportError:
+                print("  错误：未安装Google Sheets API库")
+                print("  请运行: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib")
+                return False
+            
+            # 准备数据行
+            rows = []
+            # 表头
+            headers = ["排名", "游戏名称", "核心玩法", "吸引力", "创新点", "视频链接", "监控日期"]
+            rows.append(headers)
+            
+            # 数据行
+            for analysis in analyses:
+                game_name = analysis.get("game_name", "")
+                game_rank = analysis.get("game_rank", "")
+                monitor_date = analysis.get("monitor_date", "")
+                
+                # 提取核心玩法
+                analysis_data = analysis.get("analysis_data", {})
+                if isinstance(analysis_data, dict):
+                    core_gameplay = analysis_data.get("core_gameplay", {}).get("description", "")
+                    attraction = analysis_data.get("attraction", {}).get("description", "")
+                    innovation = analysis_data.get("innovation", {}).get("description", "")
+                else:
+                    # 从文本中提取
+                    analysis_text = analysis.get("analysis", "")
+                    core_gameplay = self._extract_field(analysis_text, "核心玩法")
+                    attraction = self._extract_field(analysis_text, "吸引力")
+                    innovation = self._extract_field(analysis_text, "创新点")
+                
+                # 视频链接
+                video_url = analysis.get("gdrive_url", "") or analysis.get("share_url", "")
+                
+                row = [
+                    str(game_rank),
+                    game_name,
+                    core_gameplay[:500],  # 限制长度
+                    attraction[:500],
+                    innovation[:500],
+                    video_url,
+                    monitor_date
+                ]
+                rows.append(row)
+            
+            # 写入Google Sheets
+            spreadsheet_id = config.GOOGLE_SHEET_ID
+            # 从URL中提取ID（如果提供了完整URL）
+            if "/" in spreadsheet_id:
+                spreadsheet_id = spreadsheet_id.split("/")[-1]
+            
+            # 获取凭证
+            creds = self._get_google_sheets_credentials()
+            if not creds:
+                return False
+            
+            service = build("sheets", "v4", credentials=creds)
+            sheet_name = "游戏分析日报"
+            
+            # 创建或获取工作表
+            self._get_or_create_sheet(service, spreadsheet_id, sheet_name)
+            
+            # 写入数据
+            range_name = f"{sheet_name}!A1"
+            body = {'values': rows}
+            result = service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=range_name,
+                valueInputOption='USER_ENTERED',
+                body=body
+            ).execute()
+            
+            updated_cells = result.get('updatedCells', 0)
+            print(f"  ✓ 已写入 {updated_cells} 个单元格到工作表：{sheet_name}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"  写入Google Sheets时出错：{str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def _extract_field(self, text: str, field_name: str) -> str:
+        """从文本中提取指定字段"""
+        import re
+        if not text:
+            return ""
+        patterns = [
+            rf"{field_name}[：:]\s*(.+?)(?=\n\n|\n\*\*|$)",
+            rf"{field_name}[：:]\s*(.+?)(?=\n|$)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+        return ""
+    
+    def _get_google_sheets_credentials(self):
+        """获取Google Sheets凭证"""
+        import config
+        import json
+        import os
+        from pathlib import Path
+        
+        credentials_file = config.GOOGLE_SHEETS_CREDENTIALS
+        if not credentials_file or not os.path.exists(credentials_file):
+            print(f"  错误：凭证文件不存在：{credentials_file}")
+            return None
+        
+        # 检测是否为服务账号
+        try:
+            with open(credentials_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                is_service_account = data.get('type') == 'service_account'
+        except Exception:
+            is_service_account = False
+        
+        SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+        
+        if is_service_account:
+            # 服务账号
+            from google.oauth2 import service_account
+            return service_account.Credentials.from_service_account_file(
+                credentials_file, scopes=SCOPES
+            )
+        else:
+            # OAuth2
+            from google.oauth2.credentials import Credentials
+            from google_auth_oauthlib.flow import InstalledAppFlow
+            from google.auth.transport.requests import Request
+            
+            creds = None
+            token_file = config.GOOGLE_SHEETS_TOKEN or str(Path(credentials_file).parent / "token_sheets.json")
+            
+            if os.path.exists(token_file):
+                creds = Credentials.from_authorized_user_file(token_file, SCOPES)
+            
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
+                else:
+                    flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
+                    creds = flow.run_local_server(port=0)
+                
+                with open(token_file, 'w') as token:
+                    token.write(creds.to_json())
+            
+            return creds
+    
+    def _get_or_create_sheet(self, service, spreadsheet_id: str, sheet_name: str):
+        """获取或创建工作表"""
+        try:
+            spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+            sheet_names = [sheet['properties']['title'] for sheet in spreadsheet.get('sheets', [])]
+            
+            if sheet_name not in sheet_names:
+                # 创建工作表
+                request_body = {
+                    'requests': [{
+                        'addSheet': {
+                            'properties': {
+                                'title': sheet_name
+                            }
+                        }
+                    }]
+                }
+                service.spreadsheets().batchUpdate(
+                    spreadsheetId=spreadsheet_id,
+                    body=request_body
+                ).execute()
+                print(f"  ✓ 已创建工作表：{sheet_name}")
+        except Exception as e:
+            print(f"  获取/创建工作表时出错：{str(e)}")
     
     def run(self, max_games: int = None, skip_scrape: bool = False, steps: List[int] = None):
         """
@@ -945,10 +1311,15 @@ def main():
   2 - 搜索并下载视频
   3 - 分析视频
   4 - 生成日报
-  5 - 发送日报到飞书
+  5 - 发送日报（飞书/企业微信/Google Sheets，通过--send-to参数选择）
 
 示例：
-  python main.py                    # 执行所有步骤
+  python main.py                    # 执行所有步骤（默认选择最新的CSV，发送到飞书）
+  python main.py --platform dy      # 选择抖音小游戏榜单
+  python main.py --platform wx     # 选择微信小游戏榜单
+  python main.py --send-to wecom    # 发送到企业微信
+  python main.py --send-to sheets   # 写入到Google Sheets
+  python main.py --send-to all      # 发送到所有目标（飞书+企业微信+Google Sheets）
   python main.py --steps 0,1        # 只执行步骤0和1
   python main.py --steps 2,3        # 只执行步骤2和3
   python main.py --step 1           # 只执行步骤1
@@ -972,8 +1343,44 @@ def main():
                         help='强制重新分析：忽略数据库中已有的玩法分析缓存（使用最新提示词重新生成并覆盖）')
     parser.add_argument('--skip-screenshots', action='store_true',
                         help='跳过截图提取/上传（当前提示词/报告不依赖截图时推荐开启）')
+    parser.add_argument('--platform', type=str, choices=['dy', 'wx'], default=None,
+                        help='选择平台：dy=抖音小游戏，wx=微信小游戏。默认不限制，选择最新的CSV文件')
+    parser.add_argument('--send-to', type=str, choices=['feishu', 'wecom', 'sheets', 'all'], default='feishu',
+                        help='选择发送目标：feishu=飞书，wecom=企业微信，sheets=Google Sheets，all=全部。默认为feishu')
     
-    args = parser.parse_args()
+    # 解析参数前，检查常见的拼写错误
+    if len(sys.argv) > 1:
+        for arg in sys.argv[1:]:
+            # 检查是否是拼写错误的 --platform（常见错误：--platfrom）
+            if arg.startswith('--platfor') and arg != '--platform':
+                print(f"错误：参数 '{arg}' 不存在。")
+                print(f"提示：您是否想使用 '--platform'？")
+                print(f"      正确的用法：python main.py --platform dy")
+                print(f"                  或：python main.py --platform wx")
+                sys.exit(1)
+    
+    # 使用 parse_known_args 来更好地处理未知参数
+    args, unknown = parser.parse_known_args()
+    
+    # 检查是否有未知参数
+    if unknown:
+        for arg in unknown:
+            if arg.startswith('--'):
+                # 检查是否是拼写错误
+                if 'platfor' in arg.lower() and arg != '--platform':
+                    print(f"错误：参数 '{arg}' 不存在。")
+                    print(f"提示：您是否想使用 '--platform'？")
+                    print(f"      正确的用法：python main.py --platform dy")
+                    print(f"                  或：python main.py --platform wx")
+                else:
+                    print(f"错误：未知参数 '{arg}'")
+                    print(f"      使用 python main.py --help 查看所有可用参数")
+                sys.exit(1)
+        # 如果有其他未知参数（非 -- 开头），可能是位置参数的问题
+        if any(not arg.startswith('--') for arg in unknown):
+            print(f"错误：无法识别的参数：{unknown}")
+            print(f"      使用 python main.py --help 查看所有可用参数")
+            sys.exit(1)
     
     rankings_csv_path = (args.rankings_csv or "").strip() or None
     if rankings_csv_path is None and args.use_latest_weekly:
@@ -991,6 +1398,8 @@ def main():
         rankings_csv_path=rankings_csv_path,
         force_refresh_analysis=bool(args.force_refresh_analysis),
         skip_screenshots=bool(args.skip_screenshots),
+        platform=args.platform,
+        send_to=args.send_to,
     )
     
     # 如果只爬取

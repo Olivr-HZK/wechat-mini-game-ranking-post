@@ -19,21 +19,26 @@ import config
 class RankExtractor:
     """游戏排行榜提取器"""
     
-    def __init__(self, csv_path: str = None):
+    def __init__(self, csv_path: str = None, platform: str = None):
         """
         初始化排行榜提取器
         
         Args:
             csv_path: CSV文件路径，默认使用配置文件中的路径
+            platform: 平台类型，'dy'表示抖音，'wx'表示微信小游戏，None表示不限制（选择最新的）
         """
         self.csv_path = csv_path or config.RANKINGS_CSV_PATH
+        self.platform = platform  # 'dy' 或 'wx' 或 None
         self._effective_csv_path: Optional[str] = None
 
     def get_effective_csv_path(self) -> str:
         """
         返回实际要读取的CSV文件路径。
         - 如果 self.csv_path 是文件：直接返回
-        - 如果 self.csv_path 是目录：选择目录下最新的 *.csv
+        - 如果 self.csv_path 是目录：根据platform参数选择对应的CSV文件
+          - platform='dy': 选择以 'dy_' 开头的CSV文件（抖音）
+          - platform='wx': 选择不以 'dy_' 开头的CSV文件（微信小游戏）
+          - platform=None: 选择目录下最新的 *.csv（不限制平台）
         """
         if self._effective_csv_path and os.path.isfile(self._effective_csv_path):
             return self._effective_csv_path
@@ -47,18 +52,35 @@ class RankExtractor:
         if p.exists() and p.is_dir():
             csv_files = list(p.glob("*.csv"))
             if csv_files:
-                csv_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                self._effective_csv_path = str(csv_files[0])
-                return self._effective_csv_path
+                # 根据platform参数过滤文件
+                if self.platform == 'dy':
+                    # 选择以 'dy_' 开头的文件（抖音）
+                    csv_files = [f for f in csv_files if f.name.startswith('dy_')]
+                elif self.platform == 'wx':
+                    # 选择不以 'dy_' 开头的文件（微信小游戏）
+                    csv_files = [f for f in csv_files if not f.name.startswith('dy_')]
+                # 如果platform为None，不进行过滤，选择所有文件中最新的
+                
+                if csv_files:
+                    csv_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    self._effective_csv_path = str(csv_files[0])
+                    return self._effective_csv_path
 
         # 兜底：默认尝试 data/人气榜
         fallback_dir = Path("data") / "人气榜"
         if fallback_dir.exists() and fallback_dir.is_dir():
             csv_files = list(fallback_dir.glob("*.csv"))
             if csv_files:
-                csv_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-                self._effective_csv_path = str(csv_files[0])
-                return self._effective_csv_path
+                # 根据platform参数过滤文件
+                if self.platform == 'dy':
+                    csv_files = [f for f in csv_files if f.name.startswith('dy_')]
+                elif self.platform == 'wx':
+                    csv_files = [f for f in csv_files if not f.name.startswith('dy_')]
+                
+                if csv_files:
+                    csv_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    self._effective_csv_path = str(csv_files[0])
+                    return self._effective_csv_path
 
         self._effective_csv_path = str(Path("data") / "game_rankings.csv")
         return self._effective_csv_path
