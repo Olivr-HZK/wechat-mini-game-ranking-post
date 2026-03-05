@@ -147,83 +147,62 @@ class ReportGenerator:
             
             # 如果有关键词数据，直接使用；否则从文本中提取
             if analysis_data and isinstance(analysis_data, dict):
-                # 使用结构化的JSON数据
-                core_gameplay_data = analysis_data.get("core_gameplay", {})
-                attraction_data = analysis_data.get("attraction", {})  # 兼容旧格式（可能不存在）
-                genre_baseline_data = analysis_data.get("genre_baseline", {})
-                innovation_data = analysis_data.get("innovation", {})
-                baseline_innovation_data = analysis_data.get("baseline_and_innovation", {})
+                # 新格式：core_gameplay是字符串，baseline_game是字符串，innovation_points是数组
+                # 兼容旧格式：core_gameplay可能是对象
+                core_gameplay_str = analysis_data.get("core_gameplay", "")
+                baseline_game_str = analysis_data.get("baseline_game", "")
+                innovation_points_list = analysis_data.get("innovation_points", [])
                 
-                # 构建核心玩法文本（合并所有字段）
-                core_gameplay_parts = []
-                if core_gameplay_data.get("mechanism"):
-                    core_gameplay_parts.append(f"玩法机制：{core_gameplay_data['mechanism']}")
-                if core_gameplay_data.get("operation"):
-                    core_gameplay_parts.append(f"操作方式：{core_gameplay_data['operation']}")
-                if core_gameplay_data.get("rules"):
-                    core_gameplay_parts.append(f"游戏规则：{core_gameplay_data['rules']}")
-                if core_gameplay_data.get("features"):
-                    core_gameplay_parts.append(f"特色功能：{core_gameplay_data['features']}")
+                # 处理核心玩法（新格式是字符串，旧格式可能是对象）
+                if isinstance(core_gameplay_str, str):
+                    core_gameplay = core_gameplay_str if core_gameplay_str else "暂无核心玩法分析"
+                elif isinstance(core_gameplay_str, dict):
+                    # 兼容旧格式：对象格式
+                    core_gameplay_parts = []
+                    if core_gameplay_str.get("mechanism"):
+                        core_gameplay_parts.append(core_gameplay_str['mechanism'])
+                    if core_gameplay_str.get("operation"):
+                        core_gameplay_parts.append(f"操作方式：{core_gameplay_str['operation']}")
+                    if core_gameplay_str.get("rules"):
+                        core_gameplay_parts.append(f"游戏规则：{core_gameplay_str['rules']}")
+                    if core_gameplay_str.get("features"):
+                        core_gameplay_parts.append(f"特色功能：{core_gameplay_str['features']}")
+                    core_gameplay = "\n\n".join(core_gameplay_parts) if core_gameplay_parts else "暂无核心玩法分析"
+                else:
+                    core_gameplay = "暂无核心玩法分析"
                 
-                core_gameplay = "\n\n".join(core_gameplay_parts) if core_gameplay_parts else "暂无核心玩法分析"
+                # 处理基线游戏（新格式是字符串）
+                baseline_game = baseline_game_str if baseline_game_str else "未知"
                 
-                # 构建吸引力文本（合并所有字段）
-                attraction_parts = []
-                if attraction_data.get("points"):
-                    attraction_parts.append(f"吸引点：{attraction_data['points']}")
-                if attraction_data.get("target_audience"):
-                    attraction_parts.append(f"目标用户：{attraction_data['target_audience']}")
-                if attraction_data.get("retention_factors"):
-                    attraction_parts.append(f"留存因素：{attraction_data['retention_factors']}")
+                # 处理创新点（新格式是数组）
+                if isinstance(innovation_points_list, list) and innovation_points_list:
+                    innovation = "\n".join([f"- {str(x).strip()}" for x in innovation_points_list if str(x).strip()])
+                else:
+                    # 兼容旧格式
+                    baseline_innovation_data = analysis_data.get("baseline_and_innovation", {})
+                    innovation_data = analysis_data.get("innovation", {})
+                    innovation_parts = []
+                    if isinstance(baseline_innovation_data, dict):
+                        pts2 = baseline_innovation_data.get("micro_innovations")
+                        if isinstance(pts2, list) and pts2:
+                            innovation_parts.append("微调创新点：\n" + "\n".join([f"- {str(x).strip()}" for x in pts2 if str(x).strip()]))
+                    if isinstance(innovation_data, dict):
+                        pts = innovation_data.get("innovation_points")
+                        if isinstance(pts, list) and pts:
+                            innovation_parts.append("创新点：\n" + "\n".join([f"- {str(x).strip()}" for x in pts if str(x).strip()]))
+                    innovation = "\n\n".join([p for p in innovation_parts if p.strip()]).strip() if innovation_parts else "暂无创新点分析"
                 
-                attraction = "\n\n".join(attraction_parts) if attraction_parts else "暂无吸引力分析"
-
-                # 构建品类基线 + 创新点（新格式，兼容两种schema）
-                genre_baseline_parts = []
-                # schema A: genre_baseline
-                if isinstance(genre_baseline_data, dict):
-                    if genre_baseline_data.get("base_genre"):
-                        genre_baseline_parts.append(f"基类品类：{genre_baseline_data['base_genre']}")
-                    if genre_baseline_data.get("reference"):
-                        genre_baseline_parts.append(f"参考范式：{genre_baseline_data['reference']}")
-                    if genre_baseline_data.get("baseline_loop"):
-                        genre_baseline_parts.append(f"品类基线循环：{genre_baseline_data['baseline_loop']}")
-                # schema B: baseline_and_innovation
-                if isinstance(baseline_innovation_data, dict):
-                    if baseline_innovation_data.get("base_genre") and not any("基类品类：" in x for x in genre_baseline_parts):
-                        genre_baseline_parts.append(f"基类品类：{baseline_innovation_data['base_genre']}")
-                    if baseline_innovation_data.get("baseline_loop") and not any("品类基线循环：" in x for x in genre_baseline_parts):
-                        genre_baseline_parts.append(f"品类基线循环：{baseline_innovation_data['baseline_loop']}")
-                genre_baseline = "\n\n".join(genre_baseline_parts).strip()
-
-                innovation_parts = []
-                # schema A: innovation
-                if isinstance(innovation_data, dict):
-                    if innovation_data.get("summary"):
-                        innovation_parts.append(f"创新总结：{innovation_data['summary']}")
-                    pts = innovation_data.get("innovation_points")
-                    if isinstance(pts, list) and pts:
-                        innovation_parts.append("创新点：\n" + "\n".join([f"- {str(x).strip()}" for x in pts if str(x).strip()]))
-                    if innovation_data.get("how_it_changes_play"):
-                        innovation_parts.append(f"如何改变玩法：{innovation_data['how_it_changes_play']}")
-                    ev = innovation_data.get("evidence_from_video")
-                    if isinstance(ev, list) and ev:
-                        innovation_parts.append("视频证据：\n" + "\n".join([f"- {str(x).strip()}" for x in ev if str(x).strip()]))
-                    if innovation_data.get("tradeoffs"):
-                        innovation_parts.append(f"代价/风险：{innovation_data['tradeoffs']}")
-                # schema B: baseline_and_innovation（两段式：微调创新）
-                if isinstance(baseline_innovation_data, dict):
-                    pts2 = baseline_innovation_data.get("micro_innovations")
-                    if isinstance(pts2, list) and pts2:
-                        innovation_parts.append("微调创新点：\n" + "\n".join([f"- {str(x).strip()}" for x in pts2 if str(x).strip()]))
-                innovation = "\n\n".join([p for p in innovation_parts if p.strip()]).strip()
+                # 兼容性：保留attraction字段（虽然新格式不再使用，但为了兼容性保留）
+                attraction = "暂无吸引力分析"
             else:
                 # 从文本中提取（兼容旧格式）
                 content = self._extract_core_content(analysis_text)
                 core_gameplay = content["core_gameplay"]
+                baseline_game = "未知"
+                innovation = "暂无创新点分析"
+                # 兼容旧字段
                 attraction = content["attraction"]
                 genre_baseline = ""
-                innovation = ""
             
             game_data = {
                 "index": idx,
@@ -231,15 +210,20 @@ class ReportGenerator:
                 "game_rank": analysis.get("game_rank", ""),  # 游戏排名
                 "game_company": analysis.get("game_company", ""),  # 开发公司
                 "rank_change": analysis.get("rank_change", "--"),  # 排名变化
+                "change_type": analysis.get("change_type", ""),  # 新进榜 / 飙升（供周报区分）
+                "is_new_entry": analysis.get("is_new_entry", False),  # 是否新进榜游戏
                 "monitor_date": analysis.get("monitor_date", ""),  # 监控日期 YYYY-MM-DD
                 "platform": analysis.get("platform", ""),  # vx / dy
                 "source": analysis.get("source", ""),  # 榜单
                 "board_name": analysis.get("board_name", ""),  # 榜单名称
                 "gdrive_url": analysis.get("gdrive_url", ""),  # Google Drive视频链接
                 "core_gameplay": core_gameplay,
-                "attraction": attraction,
-                "genre_baseline": genre_baseline,
-                "innovation": innovation,
+                "baseline_game": baseline_game if 'baseline_game' in locals() else "未知",
+                "innovation_points": innovation if 'innovation' in locals() else "暂无创新点分析",
+                # 兼容旧字段
+                "attraction": attraction if 'attraction' in locals() else "",
+                "genre_baseline": genre_baseline if 'genre_baseline' in locals() else "",
+                "innovation": innovation if 'innovation' in locals() else "",
                 "analysis_data": analysis_data,  # 保留结构化数据
                 "full_analysis": analysis_text,  # 保留完整分析文本
                 "analysis_model": model_used,
@@ -293,42 +277,68 @@ class ReportGenerator:
             
             # 如果有关键词数据，直接使用；否则从文本中提取
             if analysis_data and isinstance(analysis_data, dict):
-                core_gameplay_data = analysis_data.get("core_gameplay", {})
-                attraction_data = analysis_data.get("attraction", {})  # 兼容旧格式（可能不存在）
+                # 新格式：core_gameplay是字符串，baseline_game是字符串，innovation_points是数组
+                core_gameplay_str = analysis_data.get("core_gameplay", "")
+                baseline_game_str = analysis_data.get("baseline_game", "")
+                innovation_points_list = analysis_data.get("innovation_points", [])
+                
+                # 处理核心玩法（新格式是字符串，旧格式可能是对象）
+                if isinstance(core_gameplay_str, str):
+                    core_gameplay = core_gameplay_str if core_gameplay_str else "暂无核心玩法分析"
+                elif isinstance(core_gameplay_str, dict):
+                    # 兼容旧格式：对象格式
+                    core_gameplay_parts = []
+                    if core_gameplay_str.get("mechanism"):
+                        core_gameplay_parts.append(f"**玩法机制：** {core_gameplay_str['mechanism']}")
+                    if core_gameplay_str.get("operation"):
+                        core_gameplay_parts.append(f"**操作方式：** {core_gameplay_str['operation']}")
+                    if core_gameplay_str.get("rules"):
+                        core_gameplay_parts.append(f"**游戏规则：** {core_gameplay_str['rules']}")
+                    if core_gameplay_str.get("features"):
+                        core_gameplay_parts.append(f"**特色功能：** {core_gameplay_str['features']}")
+                    core_gameplay = "\n\n".join(core_gameplay_parts) if core_gameplay_parts else "暂无核心玩法分析"
+                else:
+                    core_gameplay = "暂无核心玩法分析"
+                
+                # 处理基线游戏（新格式是字符串）
+                baseline_game = baseline_game_str if baseline_game_str else "未知"
+                
+                # 处理创新点（新格式是数组）
+                if isinstance(innovation_points_list, list) and innovation_points_list:
+                    innovation_text = "\n".join([f"- {str(x).strip()}" for x in innovation_points_list if str(x).strip()])
+                else:
+                    # 兼容旧格式：尝试从其他字段获取
+                    baseline_innovation_data = analysis_data.get("baseline_and_innovation", {})
+                    innovation_data = analysis_data.get("innovation", {})
+                    innovation_parts = []
+                    if isinstance(baseline_innovation_data, dict):
+                        pts2 = baseline_innovation_data.get("micro_innovations")
+                        if isinstance(pts2, list) and pts2:
+                            innovation_parts.extend([str(x).strip() for x in pts2 if str(x).strip()])
+                    if isinstance(innovation_data, dict):
+                        pts = innovation_data.get("innovation_points")
+                        if isinstance(pts, list) and pts:
+                            innovation_parts.extend([str(x).strip() for x in pts if str(x).strip()])
+                    innovation_text = "\n".join([f"- {x}" for x in innovation_parts]) if innovation_parts else "暂无创新点分析"
+                
+                # 兼容旧格式变量（用于后续代码）
+                attraction = "暂无吸引力分析"
                 genre_baseline_data = analysis_data.get("genre_baseline", {})
-                innovation_data = analysis_data.get("innovation", {})
-                baseline_innovation_data = analysis_data.get("baseline_and_innovation", {})
-                
-                # 构建核心玩法文本
-                core_gameplay_parts = []
-                if core_gameplay_data.get("mechanism"):
-                    core_gameplay_parts.append(f"**玩法机制：** {core_gameplay_data['mechanism']}")
-                if core_gameplay_data.get("operation"):
-                    core_gameplay_parts.append(f"**操作方式：** {core_gameplay_data['operation']}")
-                if core_gameplay_data.get("rules"):
-                    core_gameplay_parts.append(f"**游戏规则：** {core_gameplay_data['rules']}")
-                if core_gameplay_data.get("features"):
-                    core_gameplay_parts.append(f"**特色功能：** {core_gameplay_data['features']}")
-                
-                core_gameplay = "\n\n".join(core_gameplay_parts) if core_gameplay_parts else "暂无核心玩法分析"
-                
-                # 构建吸引力文本
-                attraction_parts = []
-                if attraction_data.get("points"):
-                    attraction_parts.append(f"**吸引点：** {attraction_data['points']}")
-                if attraction_data.get("target_audience"):
-                    attraction_parts.append(f"**目标用户：** {attraction_data['target_audience']}")
-                if attraction_data.get("retention_factors"):
-                    attraction_parts.append(f"**留存因素：** {attraction_data['retention_factors']}")
-                
-                attraction = "\n\n".join(attraction_parts) if attraction_parts else "暂无吸引力分析"
+                if 'innovation_data' not in locals():
+                    innovation_data = analysis_data.get("innovation", {})
+                if 'baseline_innovation_data' not in locals():
+                    baseline_innovation_data = analysis_data.get("baseline_and_innovation", {})
             else:
                 # 从文本中提取（兼容旧格式）
                 content = self._extract_core_content(analysis_text)
                 core_gameplay = content["core_gameplay"]
+                baseline_game = "未知"
+                innovation_text = "暂无创新点分析"
+                # 兼容旧格式变量
                 attraction = content["attraction"]
                 genre_baseline_data = {}
                 innovation_data = {}
+                baseline_innovation_data = {}
             
             # 游戏标题和信息
             game_rank = analysis.get("game_rank", "")
@@ -411,7 +421,17 @@ class ReportGenerator:
                         }
                     })
 
-            # 品类基线（新提示词）
+            # 基线游戏（新格式：字符串）
+            if 'baseline_game' in locals() and baseline_game and baseline_game != "未知":
+                elements.append({
+                    "tag": "div",
+                    "text": {
+                        "tag": "lark_md",
+                        "content": f"**🎯 基线游戏：** {baseline_game}"
+                    }
+                })
+            
+            # 兼容旧格式：品类基线
             if isinstance(genre_baseline_data, dict) and any(
                 genre_baseline_data.get(k) for k in ["base_genre", "reference", "baseline_loop"]
             ):
@@ -435,7 +455,17 @@ class ReportGenerator:
                     }
                 })
 
-            # 创新点分析（新提示词）
+            # 创新点分析（新格式：数组）
+            if 'innovation_text' in locals() and innovation_text and innovation_text != "暂无创新点分析":
+                elements.append({
+                    "tag": "div",
+                    "text": {
+                        "tag": "lark_md",
+                        "content": f"**💡 基于基线游戏的创新点：**\n{innovation_text}"
+                    }
+                })
+            
+            # 兼容旧格式：创新点分析
             if isinstance(innovation_data, dict) and any(
                 innovation_data.get(k) for k in ["summary", "innovation_points", "how_it_changes_play", "evidence_from_video", "tradeoffs"]
             ):
@@ -459,46 +489,15 @@ class ReportGenerator:
 
                 inv_text = "\n\n".join([x for x in inv_lines if x.strip()]).strip()
                 if inv_text:
-                    # 同样控制单段长度，避免超 2000
-                    if len(inv_text) > 1800:
-                        chunks = []
-                        buf = ""
-                        for block in inv_text.split("\n\n"):
-                            block = block.strip()
-                            if not block:
-                                continue
-                            candidate = block if not buf else (buf + "\n\n" + block)
-                            if len(candidate) <= 1800:
-                                buf = candidate
-                                continue
-                            if buf:
-                                chunks.append(buf)
-                                buf = ""
-                            while len(block) > 1800:
-                                chunks.append(block[:1800])
-                                block = block[1800:]
-                            buf = block
-                        if buf:
-                            chunks.append(buf)
+                    elements.append({
+                        "tag": "div",
+                        "text": {
+                            "tag": "lark_md",
+                            "content": f"**💡 创新点分析：**\n{inv_text}"
+                        }
+                    })
 
-                        for ci, c in enumerate(chunks, 1):
-                            elements.append({
-                                "tag": "div",
-                                "text": {
-                                    "tag": "lark_md",
-                                    "content": f"**💡 创新点分析{'（续）' if ci > 1 else ''}：**\n{c}"
-                                }
-                            })
-                    else:
-                        elements.append({
-                            "tag": "div",
-                            "text": {
-                                "tag": "lark_md",
-                                "content": f"**💡 创新点分析：**\n{inv_text}"
-                            }
-                        })
-
-            # 两段式：基线 + 微调创新（baseline_and_innovation）
+            # 兼容旧格式：两段式：基线 + 微调创新（baseline_and_innovation）
             if isinstance(baseline_innovation_data, dict) and any(
                 baseline_innovation_data.get(k) for k in ["base_genre", "baseline_loop", "micro_innovations"]
             ):
@@ -634,6 +633,72 @@ class ReportGenerator:
             }
         }
         
+        return feishu_message
+
+    def generate_feishu_trend_only(self, trend_records: List[Dict], date: str = None) -> Dict:
+        """
+        生成仅包含四个平台玩法趋势周报的飞书卡片（不包含单款游戏玩法解析）。
+
+        Args:
+            trend_records: 各平台趋势记录列表，每项含 platform, trend_analysis, monitor_date, week_range, source
+            date: 日期字符串，默认为今天
+
+        Returns:
+            飞书消息格式的字典（与 generate_feishu_format 结构一致）
+        """
+        if not date:
+            date = datetime.now().strftime("%Y年%m月%d日")
+        platform_display = {"wx": "微信小游戏", "dy": "抖音小游戏", "ios": "iOS", "android": "Android"}
+        elements = []
+        # 标题与周范围
+        week_range = None
+        for r in trend_records:
+            if r.get("week_range"):
+                week_range = r.get("week_range")
+                break
+        header_line = f"**📅 日期：** {date}"
+        if week_range:
+            header_line += f"\n**📆 周范围：** {week_range}"
+        elements.append({
+            "tag": "div",
+            "text": {"tag": "lark_md", "content": header_line}
+        })
+        elements.append({"tag": "hr"})
+        # 各平台趋势
+        for r in trend_records:
+            platform = r.get("platform", "")
+            display = platform_display.get(platform, platform)
+            text = (r.get("trend_analysis") or "").strip()
+            if not text:
+                continue
+            # 单块建议不超过约 2000 字，过长则分段
+            if len(text) > 1800:
+                chunks = [text[i : i + 1800] for i in range(0, len(text), 1800)]
+                for i, chunk in enumerate(chunks):
+                    title = f"**📱 {display}**" if i == 0 else f"**📱 {display}（续）**"
+                    elements.append({
+                        "tag": "div",
+                        "text": {"tag": "lark_md", "content": f"{title}\n\n{chunk}"}
+                    })
+            else:
+                elements.append({
+                    "tag": "div",
+                    "text": {"tag": "lark_md", "content": f"**📱 {display}**\n\n{text}"}
+                })
+            elements.append({"tag": "hr"})
+        if elements and elements[-1].get("tag") == "hr":
+            elements.pop()  # 去掉最后一条分隔线
+        feishu_message = {
+            "msg_type": "interactive",
+            "card": {
+                "config": {"wide_screen_mode": True},
+                "header": {
+                    "title": {"tag": "plain_text", "content": f"🎮 玩法趋势周报 - {date}"},
+                    "template": "blue"
+                },
+                "elements": elements
+            }
+        }
         return feishu_message
     
     def _simplify_analysis(self, analysis_text: str, max_length: int = 1000) -> str:

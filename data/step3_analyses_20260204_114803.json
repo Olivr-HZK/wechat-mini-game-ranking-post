@@ -1,0 +1,527 @@
+[
+  {
+    "game_name": "降三高成语对对碰",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"这是一款找茬配对游戏。屏幕上堆叠着很多写有汉字的方块，玩家需要找出两个完全相同并且没有被其他方块压住的字，依次点击它们就能消除。消除上层方块后，下层的方块才会显露出来。游戏的目标就是通过不断配对，把场上所有的方块都消除干净，从而过关。\",\n  \"baseline_game\": \"棋牌桌游 > 棋盘 > 麻将配对 (Mahjong)\",\n  \"innovation_points\": [\n    \"将传统的麻将牌替换为单个的汉字，增加了文化和文字识别的元素。\",\n    \"游戏主题包装为“降三高”、“养生”，精准定位中老年用户群体。\",\n    \"玩法名称暗示了“成语”元素，为简单的配对增加了知识趣味性。\",\n    \"整体美术风格采用国风养生主题，区别于传统麻将游戏的棋牌室风格。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "这是一款找茬配对游戏。屏幕上堆叠着很多写有汉字的方块，玩家需要找出两个完全相同并且没有被其他方块压住的字，依次点击它们就能消除。消除上层方块后，下层的方块才会显露出来。游戏的目标就是通过不断配对，把场上所有的方块都消除干净，从而过关。",
+      "baseline_game": "棋牌桌游 > 棋盘 > 麻将配对 (Mahjong)",
+      "innovation_points": [
+        "将传统的麻将牌替换为单个的汉字，增加了文化和文字识别的元素。",
+        "游戏主题包装为“降三高”、“养生”，精准定位中老年用户群体。",
+        "玩法名称暗示了“成语”元素，为简单的配对增加了知识趣味性。",
+        "整体美术风格采用国风养生主题，区别于传统麻将游戏的棋牌室风格。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 408,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ue_66346172-4a55-4c7d-9810-fc4618d0a7eg",
+      "img_v3_02ue_a2fe91d9-fb87-4d88-a067-d645dd51bf4g",
+      "img_v3_02ue_f03e5441-4290-480a-bf5d-30886d62808g"
+    ],
+    "screenshot_image_key": "img_v3_02ue_66346172-4a55-4c7d-9810-fc4618d0a7eg",
+    "game_rank": 1,
+    "game_company": "杭州奋游网络科技有限公司",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1pk7IuGu2yyeXhWK8Ns5rj3yYp-g4FmhE",
+    "share_url": "https://www.iesdouyin.com/share/video/7559288023520759055/?region=US&mid=7559288034118617866&u_code=0&did=MS4wLjABAAAA4a-8C5xDhf5_vz-w3WPO3_oi2Gs0QC6vL3LHfvsWIe60B9AgjHMpI7IjXvJqA1Ei&iid=MS4wLjABAAAAPa6ubM_GjWYUkNQggPuGY5kwkg3t5HL7sGwDQgzkYkfmuggB1v6q9qDvYeLocJHE&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=4EV0CgJJ_AA8ks9HOKtpRibzSYioM5c9kO2TzMa3arA-&share_version=320900&ts=1769677726&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/6305039881ff44918fa14badfc3aa017/697b31cc/video/tos/cn/tos-cn-ve-15/o0IDRzgvTpwfBCENWPuBNnxAEXaJPQHQGAfF7f/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=1059&bt=1059&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFqksmhd-IMLFa0uwUBMEq&mime_type=video_mp4&qs=0&rc=NGc7O2ZnZjw8ZDo7ZzRpNkBpMzttO3E5cmZ5NjMzNGkzM0AzLWE1YTRhX2ExLmAwNF8wYSMuNG5nMmQ0a2dhLS1kLWFzcw%3D%3D&btag=80000e00018000&dy_q=1769677726&feature_id=fea919893f650a8c49286568590446ef&l=20260129170846C9BAC8C5AA9F680B8837",
+    "video_url": "https://v3-search.douyinvod.com/6305039881ff44918fa14badfc3aa017/697b31cc/video/tos/cn/tos-cn-ve-15/o0IDRzgvTpwfBCENWPuBNnxAEXaJPQHQGAfF7f/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=1059&bt=1059&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFqksmhd-IMLFa0uwUBMEq&mime_type=video_mp4&qs=0&rc=NGc7O2ZnZjw8ZDo7ZzRpNkBpMzttO3E5cmZ5NjMzNGkzM0AzLWE1YTRhX2ExLmAwNF8wYSMuNG5nMmQ0a2dhLS1kLWFzcw%3D%3D&btag=80000e00018000&dy_q=1769677726&feature_id=fea919893f650a8c49286568590446ef&l=20260129170846C9BAC8C5AA9F680B8837"
+  },
+  {
+    "game_name": "婆婆来找茬",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"玩家在每个关卡面对一个有问题的静态场景，比如一张不和谐的全家福。你需要根据屏幕上的文字提示，找出场景里不合理的地方，并通过拖拽、交换人物或物品、调整表情等方式进行“修正”。目标就是按照引导一步步解决所有“茬”，将场景整理成一个符合游戏夸张、搞笑逻辑的“完美”画面即可通关。\",\n  \"baseline_game\": \"益智解谜 > 脑力逻辑 > 寻物\",\n  \"innovation_points\": [\n    \"将传统的点击“找茬”升级为拖拽、交换等直接操控场景元素的解谜方式。\",\n    \"解谜玩法与“婆媳矛盾”等家庭戏剧化强主题深度结合，增加了代入感。\",\n    \"谜题并非一次性完成，而是根据文字提示，像讲故事一样分步骤连续解决。\",\n    \"解谜方案常常不合常理且充满幽默感，增强了游戏的意外性和喜剧效果。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "玩家在每个关卡面对一个有问题的静态场景，比如一张不和谐的全家福。你需要根据屏幕上的文字提示，找出场景里不合理的地方，并通过拖拽、交换人物或物品、调整表情等方式进行“修正”。目标就是按照引导一步步解决所有“茬”，将场景整理成一个符合游戏夸张、搞笑逻辑的“完美”画面即可通关。",
+      "baseline_game": "益智解谜 > 脑力逻辑 > 寻物",
+      "innovation_points": [
+        "将传统的点击“找茬”升级为拖拽、交换等直接操控场景元素的解谜方式。",
+        "解谜玩法与“婆媳矛盾”等家庭戏剧化强主题深度结合，增加了代入感。",
+        "谜题并非一次性完成，而是根据文字提示，像讲故事一样分步骤连续解决。",
+        "解谜方案常常不合常理且充满幽默感，增强了游戏的意外性和喜剧效果。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 427,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ue_c778c480-87c6-4c24-83c1-6193d190dc7g",
+      "img_v3_02ue_ba68a8a8-47e3-476e-ba60-0da1ac2ad3bg",
+      "img_v3_02ue_1f77dd39-136a-4cb9-8fe3-5f048139411g"
+    ],
+    "screenshot_image_key": "img_v3_02ue_c778c480-87c6-4c24-83c1-6193d190dc7g",
+    "game_rank": 2,
+    "game_company": "个人开发者",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1itDs_ZXp8FiSuehKG6LOY7iHVegAG1Xn",
+    "share_url": "https://www.iesdouyin.com/share/video/7598399011238380009/?region=US&mid=7598398848867765055&u_code=0&did=MS4wLjABAAAAU5O6isIIT8JYwcYWbGh4XoFvD9cKyI9iU7uEGX_WNYl0UvHhyk7Y6jvz7MM92m_t&iid=MS4wLjABAAAAU-W_Pm0q_ngYx7OwkoUy2fLTl8mNlSsEYI7BqAex_-doYD3gh0NYEzPhNJlr6pL3&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=1LzY_MWxVHmNmNM5dkgb17VISriC.BVJJqHLAryXGyM-&share_version=320900&ts=1769677738&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/c7b718a36a1b7fd4b03b1dda1548ac8c/697b31dd/video/tos/cn/tos-cn-ve-15c000-ce/o0v0AivEAhAyivj0NXPV5aM8G5LXI8oXaB1Lr/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=170&bt=170&cs=5&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFuksmhd-I9VKmCuwUBMEq&mime_type=video_mp4&qs=15&rc=NGUzZTY6Ojg6OmZnO2llPEBpanFvNHM5cjZoODMzbGkzNEAzMDNgMzMyNjYxMF8wYzUuYSMzaGpuMmRrc21hLS1kLWJzcw%3D%3D&btag=80000e00018000&dy_q=1769677738&feature_id=c21aebac782617d89b11643764052a1a&l=20260129170857F21246F7E5CCE60BDB7F",
+    "video_url": "https://v3-search.douyinvod.com/88989d92586c8074d727693a97e7e39d/697b31dd/video/tos/cn/tos-cn-ve-15c000-ce/oUaQAHXVLGBii7BIDvy01h5NPa7EAviMHXXjP/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=749&bt=749&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFuksmhd-I9VKmCuwUBMEq&mime_type=video_mp4&qs=0&rc=MztmaGU0aTQ8M2k3OWRmN0BpanFvNHM5cjZoODMzbGkzNEBgMi5gNjU2NV4xX2MyMmNhYSMzaGpuMmRrc21hLS1kLWJzcw%3D%3D&btag=80000e00018000&dy_q=1769677738&feature_id=fea919893f650a8c49286568590446ef&l=20260129170857F21246F7E5CCE60BDB7F"
+  },
+  {
+    "game_name": "吞食超进化",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"玩家在地图中控制一只小恐龙，通过摇杆移动来吃掉地上的肉块，或是攻击比自己等级低的其他恐龙。每次吞噬都能获得经验值并升级，升级后体型会变大，还能从随机出现的三个技能中选择一个来增强自身能力。游戏的目标就是通过不断地吞噬进化，成为地图上最强大的恐龙，并最终击败所有对手。\",\n  \"baseline_game\": \"街机动作 > IO/大乱斗 > 吞噬进化\",\n  \"innovation_points\": [\n    \"将传统2D俯视角的吞噬玩法升级为3D恐龙主题，视觉表现更具冲击力。\",\n    \"融合了Roguelike元素，每次升级都可以在随机技能中三选一，增加了成长随机性。\",\n    \"加入了主动技能系统，玩家可以根据战况使用冲刺、护盾等技能，提升了操作策略。\",\n    \"在纯粹的玩家对抗（PvP）之外，设计了最终BOSS作为局内的大型PVE挑战目标。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "玩家在地图中控制一只小恐龙，通过摇杆移动来吃掉地上的肉块，或是攻击比自己等级低的其他恐龙。每次吞噬都能获得经验值并升级，升级后体型会变大，还能从随机出现的三个技能中选择一个来增强自身能力。游戏的目标就是通过不断地吞噬进化，成为地图上最强大的恐龙，并最终击败所有对手。",
+      "baseline_game": "街机动作 > IO/大乱斗 > 吞噬进化",
+      "innovation_points": [
+        "将传统2D俯视角的吞噬玩法升级为3D恐龙主题，视觉表现更具冲击力。",
+        "融合了Roguelike元素，每次升级都可以在随机技能中三选一，增加了成长随机性。",
+        "加入了主动技能系统，玩家可以根据战况使用冲刺、护盾等技能，提升了操作策略。",
+        "在纯粹的玩家对抗（PvP）之外，设计了最终BOSS作为局内的大型PVE挑战目标。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 449,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ue_144f2665-d76f-4d8f-9b10-0f14fe66c4cg",
+      "img_v3_02ue_389320f4-d47d-4bf6-bb22-fc0d22a3196g",
+      "img_v3_02ue_2d5b2d18-9b8f-4036-99ab-1a6fd0b5004g"
+    ],
+    "screenshot_image_key": "img_v3_02ue_144f2665-d76f-4d8f-9b10-0f14fe66c4cg",
+    "game_rank": 4,
+    "game_company": "个人开发者",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1Gqyci43WZ0Kd52mEW8j6L2kBOWv2HDhN",
+    "share_url": "https://www.iesdouyin.com/share/video/7574700092725284123/?region=US&mid=7574700095069768511&u_code=0&did=MS4wLjABAAAAkN-2DV_iou2f0mNwKMF5LdsUbc6T4ovnD52BHzlEe44&iid=MS4wLjABAAAAWtWqSgqSbIHD3OeMXJZNU1Dm3NJwVO2SG2xXxDF3Ecs&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=Y1kqi0xL87yAOKBffQjaoJR.pyW4Lk_v_dEGSi6eNzg-&share_version=320900&ts=1769677753&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/0dabc237ec21b7aeeabf694b0b15b3e2/697b31f0/video/tos/cn/tos-cn-ve-15/oAGfrFuhAsL9eD6pIAhAnQwk4dEAHpcDggB9Q7/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=702&bt=702&cs=5&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFkksmhd-I9VKmCuwUBMEq&mime_type=video_mp4&qs=15&rc=ZzU4NTZoOGg4Njk0Zmk2aUBpM247Onc5cjxlNzMzNGkzM0A1YDBhLTUzNjUxNTI0X2E2YSNkX2IxMmRza2NhLS1kLTBzcw%3D%3D&btag=80000e00018000&dy_q=1769677753&feature_id=53a68e7ae22d88249bcc7b3c7fa4bb9e&l=20260129170912B0FF81F68274C90BE46C",
+    "video_url": "https://v3-search.douyinvod.com/d5f8403a0551634b131be94ebd9c9637/697b31f0/video/tos/cn/tos-cn-ve-15/os1AYupIe7pDKBkvgnDbrfElFAA9ogH6uALQUQ/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=2117&bt=2117&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFkksmhd-I9VKmCuwUBMEq&mime_type=video_mp4&qs=0&rc=ZzdoZzQ8NTY6ZDxnNDw6OUBpM247Onc5cjxlNzMzNGkzM0BeLi0wMTBjXy0xYS0vYS4vYSNkX2IxMmRza2NhLS1kLTBzcw%3D%3D&btag=80000e00018000&dy_q=1769677753&feature_id=fea919893f650a8c49286568590446ef&l=20260129170912B0FF81F68274C90BE46C"
+  },
+  {
+    "game_name": "国王的密室消除",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"玩家通过点击棋盘上两个或以上相连的同色方块进行消除。消除方块的主要目标是清除覆盖在棋盘上方的绿色障碍物层。当消除方块后，其上方的障碍物也会随之消失。通过一次性消除多个方块可以获得炸弹等道具，这些道具由国王角色投掷，用于直接炸开那些下方已无方块的障碍物，最终清除所有障碍物即可过关。\",\n  \"baseline_game\": \"益智解谜 > 消除类 > 点消/爆破\",\n  \"innovation_points\": [\n    \"将消除目标从棋盘格内的元素，改为覆盖在整个棋盘上方的图层式障碍物。\",\n    \"消除方块和完成目标分为两步，消除方块是为了给使用道具清理出空间。\",\n    \"道具（如炸弹）不直接作用于方块，而是由国王角色投掷来摧毁上方的障碍层。\",\n    \"关卡设计围绕“侵蚀”概念展开，玩家需要策略性地消除方块为道具开路。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "玩家通过点击棋盘上两个或以上相连的同色方块进行消除。消除方块的主要目标是清除覆盖在棋盘上方的绿色障碍物层。当消除方块后，其上方的障碍物也会随之消失。通过一次性消除多个方块可以获得炸弹等道具，这些道具由国王角色投掷，用于直接炸开那些下方已无方块的障碍物，最终清除所有障碍物即可过关。",
+      "baseline_game": "益智解谜 > 消除类 > 点消/爆破",
+      "innovation_points": [
+        "将消除目标从棋盘格内的元素，改为覆盖在整个棋盘上方的图层式障碍物。",
+        "消除方块和完成目标分为两步，消除方块是为了给使用道具清理出空间。",
+        "道具（如炸弹）不直接作用于方块，而是由国王角色投掷来摧毁上方的障碍层。",
+        "关卡设计围绕“侵蚀”概念展开，玩家需要策略性地消除方块为道具开路。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 436,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ue_22149e52-d55f-4cde-9b13-eb126745b7fg",
+      "img_v3_02ue_7e6100c8-e3db-4345-99ea-0964b79fc07g"
+    ],
+    "screenshot_image_key": "img_v3_02ue_22149e52-d55f-4cde-9b13-eb126745b7fg",
+    "game_rank": 6,
+    "game_company": "杭州奋游网络科技有限公司",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1dAt8_0A-RBUxLFzZe0VAIDFK4YH9wGeE",
+    "share_url": "https://www.iesdouyin.com/share/video/7599627136915580585/?region=US&mid=7599627108528163620&u_code=0&did=MS4wLjABAAAAnb-5UBSjxSxNwtac-5cAzrB88C7X1QCapITr7D98oEgsnuCrsrxSaoOXD5BRCg0a&iid=MS4wLjABAAAA1ILFydqQS0AWAmyvUmr36ww-m2sftWb7UMltjYjVydodTdMxhiABSy5THdPzuWkT&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=7TYA9ul0OiXsp7SEgfw6d_ks0W0_McOalXizoK6lAxI-&share_version=320900&ts=1769677770&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/cfcefb7252ff3371fec21f0ce59b8f68/697b320c/video/tos/cn/tos-cn-ve-15/oEQBiQTpiE8PDg3QIPABxJaadAECPiQgCILKX/?a=615883&ch=11&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&cv=1&br=794&bt=794&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFB5smhd-IT6R5MuwUBMEq&mime_type=video_mp4&qs=0&rc=Njc6M2Q5aDwzZTYzNzRoM0BpMzM4NWs5cjVuODMzNGkzM0AuLjJfMTMwXzIxLTYvYTEwYSM1aTU1MmQ0aG9hLS1kLS9zcw%3D%3D&btag=80000e00020000&dy_q=1769677770&feature_id=fea919893f650a8c49286568590446ef&l=202601291709294E988672357C5C0C33B6",
+    "video_url": "https://v3-search.douyinvod.com/cfcefb7252ff3371fec21f0ce59b8f68/697b320c/video/tos/cn/tos-cn-ve-15/oEQBiQTpiE8PDg3QIPABxJaadAECPiQgCILKX/?a=615883&ch=11&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&cv=1&br=794&bt=794&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFB5smhd-IT6R5MuwUBMEq&mime_type=video_mp4&qs=0&rc=Njc6M2Q5aDwzZTYzNzRoM0BpMzM4NWs5cjVuODMzNGkzM0AuLjJfMTMwXzIxLTYvYTEwYSM1aTU1MmQ0aG9hLS1kLS9zcw%3D%3D&btag=80000e00020000&dy_q=1769677770&feature_id=fea919893f650a8c49286568590446ef&l=202601291709294E988672357C5C0C33B6"
+  },
+  {
+    "game_name": "脑瓜有点疼",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"这是一款看图文猜答案的益智问答游戏。每一关都会给出一个脑筋急转弯、谜语或者一个利用谐音梗的趣味问题，并配有简单的漫画插图。玩家需要根据文字和图片提示，发挥想象力和逆向思维来猜出答案。游戏的核心乐趣在于解开这些不按常理出牌的谜题，享受恍然大悟的瞬间。\",\n  \"baseline_game\": \"益智解谜 > 脑力逻辑 > 文字/问答\",\n  \"innovation_points\": [\n    \"将传统文字脑筋急转弯与漫画叙事结合，每道题都配有专属的情景插画。\",\n    \"题目类型专注于逻辑陷阱和中文谐音梗，强调趣味性和联想而非知识储备。\",\n    \"采用翻页式的问答呈现方式，为答案的揭晓过程增添了趣味性和仪式感。\",\n    \"为汉字标注拼音，内容和视觉风格明显面向儿童和亲子共游的细分市场。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "这是一款看图文猜答案的益智问答游戏。每一关都会给出一个脑筋急转弯、谜语或者一个利用谐音梗的趣味问题，并配有简单的漫画插图。玩家需要根据文字和图片提示，发挥想象力和逆向思维来猜出答案。游戏的核心乐趣在于解开这些不按常理出牌的谜题，享受恍然大悟的瞬间。",
+      "baseline_game": "益智解谜 > 脑力逻辑 > 文字/问答",
+      "innovation_points": [
+        "将传统文字脑筋急转弯与漫画叙事结合，每道题都配有专属的情景插画。",
+        "题目类型专注于逻辑陷阱和中文谐音梗，强调趣味性和联想而非知识储备。",
+        "采用翻页式的问答呈现方式，为答案的揭晓过程增添了趣味性和仪式感。",
+        "为汉字标注拼音，内容和视觉风格明显面向儿童和亲子共游的细分市场。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 417,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ue_9b511c51-5ad4-420b-80be-8bba6dbca07g",
+      "img_v3_02ue_cdd4ef94-7ae8-4f56-8849-63c4b0bbabbg",
+      "img_v3_02ue_274340c6-b764-46b7-a3bf-cace774905bg"
+    ],
+    "screenshot_image_key": "img_v3_02ue_9b511c51-5ad4-420b-80be-8bba6dbca07g",
+    "game_rank": 7,
+    "game_company": "--",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1DdCUecs4wvnfrtRiKO_7K7ZsQ_in05a3",
+    "share_url": "https://www.iesdouyin.com/share/video/7584776079346224435/?region=US&mid=7584776098383170355&u_code=0&did=MS4wLjABAAAATdjBkuJ89ADxXzFdkywi3vxcy2uWiqwXRMWcIowPz005Yw9Q_7rdgZ19mqTXOHQq&iid=MS4wLjABAAAAfYsq6z3xTUyGD1q0Mylyt0tZ2MJs_Uhr0dRHdKgghXfxbRJUSLlCZGMkW-il97gb&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=osB59eQJeMvLfTNiffwWQVPhr5mj1ydj3WTepsyMAvk-&share_version=320900&ts=1769677801&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/4c2e93b0a3ca3ec5da5e59a371ceb678/697b3218/video/tos/cn/tos-cn-ve-15/okrK5sLQcg7BARqgfCXSAlkMAUEeFBHE8RhBeS/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=340&bt=340&cs=5&ds=6&eid=45312&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFC5smhd-IT6R5MuwUBMEq&mime_type=video_mp4&qs=11&rc=ZzU0Omk7OzNoPGc2PDRlNUBpamQzc3Q5cnk7ODMzNGkzM0AzLWAvYDIvNl8xYTQzX2NeYSNucy1eMmQ0Zi5hLS1kLS9zcw%3D%3D&btag=80000e00018000&dy_q=1769677800&feature_id=53a68e7ae22d88249bcc7b3c7fa4bb9e&l=20260129171000C61813801BA6A40C219B",
+    "video_url": "https://v3-search.douyinvod.com/13da8eb5db51f0e182b1d52a48594840/697b3218/video/tos/cn/tos-cn-ve-15/o00ZICqAABicPgLF1inBPic6SACPfEkVeUoA4Q/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=1295&bt=1295&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFC5smhd-IT6R5MuwUBMEq&mime_type=video_mp4&qs=0&rc=ZDo6ZmVoZjU1Zzo2NzxkO0BpamQzc3Q5cnk7ODMzNGkzM0AxLjMvXzViNWExYjE1LV5gYSNucy1eMmQ0Zi5hLS1kLS9zcw%3D%3D&btag=80000e00018000&dy_q=1769677800&feature_id=fea919893f650a8c49286568590446ef&l=20260129171000C61813801BA6A40C219B"
+  },
+  {
+    "game_name": "箭头会拐弯",
+    "analysis": "```json\n{\n  \"core_gameplay\": \"该视频展示的是一个名为“箭头会拐弯”的科学实验，并非一款游戏的实际玩法录屏。视频中演示了将一张画有箭头的纸放在一个装满水的圆柱形玻璃杯后面，由于光的折射原理（凸透镜成像），透过水杯看到的箭头会发生方向反转。整个过程为物理现象的展示，不包含任何玩家操作、游戏目标或交互界面。\",\n  \"baseline_game\": \"未知\",\n  \"innovation_points\": [\n    \"未发现新玩法，建议手动观察该游戏动态\"\n  ],\n  \"suggest_manual_watch\": true\n}\n```",
+    "analysis_data": {
+      "core_gameplay": "该视频展示的是一个名为“箭头会拐弯”的科学实验，并非一款游戏的实际玩法录屏。视频中演示了将一张画有箭头的纸放在一个装满水的圆柱形玻璃杯后面，由于光的折射原理（凸透镜成像），透过水杯看到的箭头会发生方向反转。整个过程为物理现象的展示，不包含任何玩家操作、游戏目标或交互界面。",
+      "baseline_game": "未知",
+      "innovation_points": [
+        "未发现新玩法，建议手动观察该游戏动态"
+      ],
+      "suggest_manual_watch": true
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 285,
+    "change_type": "飙升",
+    "is_new_entry": false,
+    "screenshot_image_keys": [
+      "img_v3_02u3_522853f3-a8d5-4d2c-a600-3bfcaf9910ag",
+      "img_v3_02u3_86ffc40b-2e6c-4761-88cb-b83d289ff23g",
+      "img_v3_02u3_905ade12-3110-4511-a0dd-991507c5024g"
+    ],
+    "screenshot_image_key": "img_v3_02u3_522853f3-a8d5-4d2c-a600-3bfcaf9910ag",
+    "game_rank": 8,
+    "game_company": "个人开发者",
+    "rank_change": "14",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=10lRjQsbi6TIcxPOQlwl5LHqGqlYQUZ_X",
+    "share_url": "https://www.iesdouyin.com/share/video/7417067175996951847/?region=US&mid=7417067157915208475&u_code=0&did=MS4wLjABAAAAEeU89Fsz1IZIJX3ymDHiUTAT-iAefvfIfWaPpSGWIrVJXSXZiFHxCdGTELl-aT9T&iid=MS4wLjABAAAAhyJS-ZlHbTnpmDAHDeZOIj6I1erX1slSZdKyjGExDAw3Y9bzmhp3iSyDSuw7Mkg5&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=.kQ2XecpxFK37ec3e.Qe1Q3A4TVAA.J.tQ.vZjo6Ytc-&share_version=320900&ts=1768811414&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/8b2ab223f0a699463c2925be85dcb4ee/696df9c9/video/tos/cn/tos-cn-ve-15/oEBvvPfuQHZ1ziBAdP9BAHDXidEAIIzgeKXApy/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=227&bt=227&cs=2&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFpJZBhd-IMLFa0uwUBMEq&mime_type=video_mp4&qs=15&rc=Zjk0O2YzZ2VkNGY2O2c5aUBpanN2dnc5cjZldTMzNGkzM0AzYTQ1XjYxNi8xYjUwLTJiYSNfaGxrMmRzYmtgLS1kLTBzcw%3D%3D&btag=80000e00018000&dy_q=1768811413&feature_id=c6de0308cacfd993ef282c8e1c646267&l=202601191630134F66EC34EE3CEA185146",
+    "video_url": "https://v3-search.douyinvod.com/02ec7621638dc05d4ac09c2ae974e5f0/696df9c9/video/tos/cn/tos-cn-ve-0015c800/oEdAXBi12MBDetgZuvGKiZuAf9DQ7zEAtHIHzc/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=703&bt=703&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFpJZBhd-IMLFa0uwUBMEq&mime_type=video_mp4&qs=0&rc=OTszZjM3OjVpOjtmaGdpNUBpanN2dnc5cjZldTMzNGkzM0AvYy41YS5jNWMxMDYuMGNhYSNfaGxrMmRzYmtgLS1kLTBzcw%3D%3D&btag=80000e00018000&dy_q=1768811413&feature_id=aa7df520beeae8e397df15f38df0454c&l=202601191630134F66EC34EE3CEA185146"
+  },
+  {
+    "game_name": "我猜你能过第二关",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"玩家扮演一个爱开玩笑的神仙。每一关都会有一个角色来许愿，玩家需要仔细听他们的愿望，找出话里的谐音梗或者双关语。然后，从给出的三个物品选项中，选择一个能以搞笑、曲解的方式“实现”愿望的道具。游戏目标就是通过这种脑筋急转弯式的选择，触发有趣的动画结局并成功过关。\",\n  \"baseline_game\": \"益智解谜 > 脑力逻辑 > 文字/问答\",\n  \"innovation_points\": [\n    \"将传统解谜与角色扮演相结合，让玩家扮演一个专门曲解愿望的“空耳”菩萨。\",\n    \"谜题核心完全围绕现代网络谐音梗和双关语设计，玩法极具创意和幽默感。\",\n    \"游戏的正反馈并非来自“做对题”，而是来自选择“错误”选项后引发的搞笑动画。\",\n    \"将静态的文字谜题与动态的、有剧情的场景动画结合，增强了叙事和娱乐性。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "玩家扮演一个爱开玩笑的神仙。每一关都会有一个角色来许愿，玩家需要仔细听他们的愿望，找出话里的谐音梗或者双关语。然后，从给出的三个物品选项中，选择一个能以搞笑、曲解的方式“实现”愿望的道具。游戏目标就是通过这种脑筋急转弯式的选择，触发有趣的动画结局并成功过关。",
+      "baseline_game": "益智解谜 > 脑力逻辑 > 文字/问答",
+      "innovation_points": [
+        "将传统解谜与角色扮演相结合，让玩家扮演一个专门曲解愿望的“空耳”菩萨。",
+        "谜题核心完全围绕现代网络谐音梗和双关语设计，玩法极具创意和幽默感。",
+        "游戏的正反馈并非来自“做对题”，而是来自选择“错误”选项后引发的搞笑动画。",
+        "将静态的文字谜题与动态的、有剧情的场景动画结合，增强了叙事和娱乐性。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 432,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02u4_61f579f3-ab9b-4893-8160-91bddd39867g",
+      "img_v3_02u4_2410027a-21fc-40a0-b069-f1e0b9d54f1g",
+      "img_v3_02u4_583333c2-6cc0-4d31-a7b3-ce912a73a46g"
+    ],
+    "screenshot_image_key": "img_v3_02u4_61f579f3-ab9b-4893-8160-91bddd39867g",
+    "game_rank": 9,
+    "game_company": "杭州奋游网络科技有限公司",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1lVPVdX1XghwNnV8koMWxBQUJocKvhQOS",
+    "share_url": "https://www.iesdouyin.com/share/video/7595572944295566705/?region=US&mid=7595572882843896617&u_code=0&did=MS4wLjABAAAAe71LbGQFWDTuuvslav4wZT7FR_ffJL6oaYiiSEs74JA&iid=MS4wLjABAAAAIlKiZp4iU-5Ke4tVmOnTEg3awHlcsp6X8qUMuQ1bvZg&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=HmEymEkqyVRcG2K5ynlvR.Xs6wBQnCpFoRe_OFEV.uQ-&share_version=320900&ts=1768891188&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/b81df962273765cfebf2ec5cbe40e97d/696f3166/video/tos/cn/tos-cn-ve-15c000-ce/oU7W6HdzBE1yKo6KAoiNoLeraBfd0FEIitwpAt/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=193&bt=193&cs=5&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eF~fsBhd-I9VKmCuwUBMEq&mime_type=video_mp4&qs=15&rc=NDhnNDVlaTY4OGVnZzY4aUBpM3R0dHQ5cm9oODMzbGkzNUA2MTI2MWMuXi8xXi0vMDFjYSMyZF5tMmRzXmhhLS1kLTVzcw%3D%3D&btag=80000e00018000&dy_q=1768891188&feature_id=c21aebac782617d89b11643764052a1a&l=202601201439471AAD9B8CCA2EDB8C14D8",
+    "video_url": "https://v3-search.douyinvod.com/e9536918b559dbb9ee472ed9f390b9c9/696f3166/video/tos/cn/tos-cn-ve-15c000-ce/o8a650OhfABAQpBrAW6oKzEwWieKHtEDooiIEK/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=764&bt=764&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eF~fsBhd-I9VKmCuwUBMEq&mime_type=video_mp4&qs=0&rc=Zzw4Mzk8OGU3ZjtoaWRpaEBpM3R0dHQ5cm9oODMzbGkzNUBiMl5gMy4xXi4xNS00Xi9eYSMyZF5tMmRzXmhhLS1kLTVzcw%3D%3D&btag=80000e00018000&dy_q=1768891188&feature_id=fea919893f650a8c49286568590446ef&l=202601201439471AAD9B8CCA2EDB8C14D8"
+  },
+  {
+    "game_name": "通关我贼六",
+    "analysis": "```json\n{\n  \"core_gameplay\": \"玩家需要在限定时间内，通过拖拽场景中的各种物品来帮助角色完成特定任务，比如洗完一万件衣服。你需要观察画面，发挥想象力，找到所有能用的道具，比如把盆给角色、用锤子砸开地板放出老鼠、甚至让扫地机器人和狗都来帮忙。每找到一个有效方法，任务进度就会增加，直到最终完成目标即可通关。\",\n  \"baseline_game\": \"益智解谜 > 脑力逻辑 > 寻物\",\n  \"innovation_points\": [\n    \"未发现新玩法，建议手动观察该游戏动态\"\n  ],\n  \"suggest_manual_watch\": true\n}\n```",
+    "analysis_data": {
+      "core_gameplay": "玩家需要在限定时间内，通过拖拽场景中的各种物品来帮助角色完成特定任务，比如洗完一万件衣服。你需要观察画面，发挥想象力，找到所有能用的道具，比如把盆给角色、用锤子砸开地板放出老鼠、甚至让扫地机器人和狗都来帮忙。每找到一个有效方法，任务进度就会增加，直到最终完成目标即可通关。",
+      "baseline_game": "益智解谜 > 脑力逻辑 > 寻物",
+      "innovation_points": [
+        "未发现新玩法，建议手动观察该游戏动态"
+      ],
+      "suggest_manual_watch": true
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 299,
+    "change_type": "飙升",
+    "is_new_entry": false,
+    "screenshot_image_keys": [
+      "img_v3_02ue_d6f631b1-740c-4d83-b7e3-6f5c3265becg",
+      "img_v3_02ue_4d9050d9-01b7-4c10-924e-c56afdd3a75g",
+      "img_v3_02ue_142df884-372f-4783-a32c-745688379e9g"
+    ],
+    "screenshot_image_key": "img_v3_02ue_d6f631b1-740c-4d83-b7e3-6f5c3265becg",
+    "game_rank": 11,
+    "game_company": "武汉市多比特信息科技有限公司",
+    "rank_change": "64",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1-x1xrOvshP5MjHfLEKOFn1JcZBSgMRKI",
+    "share_url": "https://www.iesdouyin.com/share/video/7471615237104373046/?region=US&mid=7471615216065743642&u_code=0&did=MS4wLjABAAAAMeQ1fp0OZ0ZlkQCyPQo-69hklwhBGzhiyfkk1UTbduA&iid=MS4wLjABAAAA1VrI3V5Fk0ELXzkJRrtHzP5shjbRgnGbG57FQa-Gibc&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=86jFRcwErJBOzVJcNCqv._ic1KarKOuF.fFtaSpUYKY-&share_version=320900&ts=1769677837&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/da65efa12eb76fb05fe2d9900d56e0ef/697b3243/video/tos/cn/tos-cn-ve-0015c800/ogG9DEgsIZnQvBANEBwbyDFBnsTuhAfIfdARJ2/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=305&bt=305&cs=2&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFlXsmhd-IT6R5MuwUBMEq&mime_type=video_mp4&qs=15&rc=NTo5PDdlOjlmNTo4NTgzNEBpamxsc3k5cnc7eDMzNGkzM0A0NGIuNjMvXzAxNTEuLTQtYSM2c3FgMmRrMWxgLS1kLTBzcw%3D%3D&btag=80000e00018000&dy_q=1769677837&feature_id=00eef34d20cbe3160100305f2644fc17&l=20260129171036AED2DFBE70FE120C1AF3",
+    "video_url": "https://v3-search.douyinvod.com/efafa674d04dfb491593423ecb40c6f9/697b3243/video/tos/cn/tos-cn-ve-0015c800/oAgInAEfJQDvgsA2IvyABcnwTDFp9syEhDVZfX/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=723&bt=723&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFlXsmhd-IT6R5MuwUBMEq&mime_type=video_mp4&qs=0&rc=Nmc4NThlOztkOTs2MzNnM0Bpamxsc3k5cnc7eDMzNGkzM0AuM2MtYGE2Xl8xMGIyYDNjYSM2c3FgMmRrMWxgLS1kLTBzcw%3D%3D&btag=80000e00018000&dy_q=1769677837&feature_id=aa7df520beeae8e397df15f38df0454c&l=20260129171036AED2DFBE70FE120C1AF3"
+  },
+  {
+    "game_name": "线条消消消",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"这是一款画线跑酷游戏。游戏里的小人会自动往前跑，玩家需要用手指在屏幕上画出线条，给小人铺路。目标是画出合适的路线，帮助小人跳过箱子、躲开重物等障碍，收集金币，并最终顺利到达终点城堡通关。\",\n  \"baseline_game\": \"街机动作 > 跑酷/竞速 > 关卡跑酷\",\n  \"innovation_points\": [\n    \"将传统跑酷的跳跃/滑动操作，改为自由画线创造路径。\",\n    \"玩家不直接控制角色，而是通过实时绘制地形来间接引导。\",\n    \"引入了类似“墨水”的资源条，限制了可绘制线条的总长度。\",\n    \"障碍物不仅要躲避，有时也需要画线作为跳板来越过。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "这是一款画线跑酷游戏。游戏里的小人会自动往前跑，玩家需要用手指在屏幕上画出线条，给小人铺路。目标是画出合适的路线，帮助小人跳过箱子、躲开重物等障碍，收集金币，并最终顺利到达终点城堡通关。",
+      "baseline_game": "街机动作 > 跑酷/竞速 > 关卡跑酷",
+      "innovation_points": [
+        "将传统跑酷的跳跃/滑动操作，改为自由画线创造路径。",
+        "玩家不直接控制角色，而是通过实时绘制地形来间接引导。",
+        "引入了类似“墨水”的资源条，限制了可绘制线条的总长度。",
+        "障碍物不仅要躲避，有时也需要画线作为跳板来越过。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 359,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ue_bf8a8fe5-7018-49c3-8916-49935682d34g",
+      "img_v3_02ue_249833a1-2eb5-46be-95ce-b2ab8a3254ag",
+      "img_v3_02ue_37efce74-cbc6-4d6c-b112-d77404bc7dfg"
+    ],
+    "screenshot_image_key": "img_v3_02ue_bf8a8fe5-7018-49c3-8916-49935682d34g",
+    "game_rank": 14,
+    "game_company": "厦门市听阅网络科技有限公司",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "微信小游戏",
+    "source": "引力引擎",
+    "board_name": "微信小游戏人气周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1kGjoshEJ9NJkd2Po_ci53e-5kjYmByuO",
+    "share_url": "https://www.iesdouyin.com/share/video/7461102858511895819/?region=US&mid=7461102880175557439&u_code=0&did=MS4wLjABAAAATdjBkuJ89ADxXzFdkywi3vxcy2uWiqwXRMWcIowPz005Yw9Q_7rdgZ19mqTXOHQq&iid=MS4wLjABAAAAfYsq6z3xTUyGD1q0Mylyt0tZ2MJs_Uhr0dRHdKgghXfxbRJUSLlCZGMkW-il97gb&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=Tsv6d.mBkJ6fR4QWHfCxIbDfBIVsvgodl35cQErsHdY-&share_version=320900&ts=1769677859&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/a336fe5cd78b704f03c4d131680db79c/697b326b/video/tos/cn/tos-cn-ve-15/osPFeewKIdlSCKLBQdCLABA4g7L0qGegBAxGNI/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=179&bt=179&cs=2&ds=6&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFAXsmhd-IT6R5MuwUBMEq&mime_type=video_mp4&qs=11&rc=aGY1NThkZjNkNjw2PDdnOkBpanI1dnk5cmVseDMzNGkzM0AtYTE2L2AyXjYxLS4zYl8yYSMxXjAvMmRrZzJgLS1kLTBzcw%3D%3D&btag=80000e00020000&dy_q=1769677859&feature_id=00eef34d20cbe3160100305f2644fc17&l=20260129171058A977BDD700FD500BE564",
+    "video_url": "https://v3-search.douyinvod.com/696e3ae4503ab76e7c550bfe3ed0c9a4/697b326b/video/tos/cn/tos-cn-ve-0015c800/o4xWdwAFeAQFeNE8gG7Pg6CSUIBGLBHKLlII6e/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=591&bt=591&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFAXsmhd-IT6R5MuwUBMEq&mime_type=video_mp4&qs=0&rc=NmVlaTZoN2g2Mzk8OTs2NkBpanI1dnk5cmVseDMzNGkzM0AtNF80Yy9gNWMxLl4tXjJhYSMxXjAvMmRrZzJgLS1kLTBzcw%3D%3D&btag=80000e00020000&dy_q=1769677859&feature_id=aa7df520beeae8e397df15f38df0454c&l=20260129171058A977BDD700FD500BE564"
+  },
+  {
+    "game_name": "盖高楼",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"这是一款考验玩家记忆力和反应速度的游戏。游戏开始时，系统会按照特定顺序依次点亮或触碰桌面上的一排杯子。玩家需要记住这个顺序，然后在演示结束后，按照刚才的顺序依次点击对应的杯子。每点对一个，杯子就会被收集并堆叠起来，最终目标是成功复现整个序列，将所有指定的杯子堆叠成一座“高楼”。\",\n  \"baseline_game\": \"益智解谜 > 脑力逻辑 > 排序/收纳\",\n  \"innovation_points\": [\n    \"将经典的“西蒙说”式抽象记忆玩法，包装为“盖高楼”这一具象化的建造主题。\",\n    \"游戏目标从单纯的“正确复现序列”升级为“建成一座高楼”，给予玩家更强的目标感。\",\n    \"操作反馈非常直观，每次成功点击都会使杯子加入堆叠，实时展示进度。\",\n    \"核心机制是“演示-模仿”的两阶段循环，清晰地分离了记忆与操作环节，上手简单。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "这是一款考验玩家记忆力和反应速度的游戏。游戏开始时，系统会按照特定顺序依次点亮或触碰桌面上的一排杯子。玩家需要记住这个顺序，然后在演示结束后，按照刚才的顺序依次点击对应的杯子。每点对一个，杯子就会被收集并堆叠起来，最终目标是成功复现整个序列，将所有指定的杯子堆叠成一座“高楼”。",
+      "baseline_game": "益智解谜 > 脑力逻辑 > 排序/收纳",
+      "innovation_points": [
+        "将经典的“西蒙说”式抽象记忆玩法，包装为“盖高楼”这一具象化的建造主题。",
+        "游戏目标从单纯的“正确复现序列”升级为“建成一座高楼”，给予玩家更强的目标感。",
+        "操作反馈非常直观，每次成功点击都会使杯子加入堆叠，实时展示进度。",
+        "核心机制是“演示-模仿”的两阶段循环，清晰地分离了记忆与操作环节，上手简单。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 448,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ua_3636b084-89b7-4657-b68b-a30915a9741g",
+      "img_v3_02ua_16c14853-30da-4e4e-b0ea-7b440912073g",
+      "img_v3_02ua_4e6f8e6c-baef-4504-97e4-7b2b979ac83g"
+    ],
+    "screenshot_image_key": "img_v3_02ua_3636b084-89b7-4657-b68b-a30915a9741g",
+    "game_rank": 1,
+    "game_company": "--",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "抖音小游戏",
+    "source": "引力引擎",
+    "board_name": "抖音小游戏周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=18bISWNNvUruFk6R2iRowyLkm5EdHI6l3",
+    "share_url": "https://www.iesdouyin.com/share/video/6827686633912012046/?region=US&mid=6827686642082384648&u_code=0&did=MS4wLjABAAAAECyuDtAg6nON5y1nDf6rVx30ZD8uc8OuoHgfVlofj6QKOp1iRu93Hpk7L9NNFF6p&iid=MS4wLjABAAAAYUTZPB4zDfDxylHf3ioZ-0TFIEqas4ky4gVgh_winsL0sfYK8TVVROOrwXFdMDO4&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=I9cfp0A9Mdc6X_onhcKcf4TBbzLMwgZTmqtgakTEWdw-&share_version=320900&ts=1769394485&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/07e40ba8ee7ae4be2e609529efe41631/6976df6a/video/tos/cn/tos-cn-ve-0015c801/3f4a9771d1e843b9b85d7af4dfc7dd4a/?a=615883&ch=11&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&br=542&bt=542&cs=0&ds=6&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFSqW_hd-IB1VjqkwUBMEq&mime_type=video_mp4&qs=0&rc=Z2Q2ZjM5aTk3Nzw3ZGQ1OkBpam43dzV5cG1ndTMzOGkzM0BhNWJfM2IwXjAxYC9jMDJeYSNhajFpY15gLi1fLS0zLS9zcw%3D%3D&btag=80000e00018000&dy_q=1769394485&l=20260126102804E15861375DE93B992FFD",
+    "video_url": "https://v3-search.douyinvod.com/07e40ba8ee7ae4be2e609529efe41631/6976df6a/video/tos/cn/tos-cn-ve-0015c801/3f4a9771d1e843b9b85d7af4dfc7dd4a/?a=615883&ch=11&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&br=542&bt=542&cs=0&ds=6&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFSqW_hd-IB1VjqkwUBMEq&mime_type=video_mp4&qs=0&rc=Z2Q2ZjM5aTk3Nzw3ZGQ1OkBpam43dzV5cG1ndTMzOGkzM0BhNWJfM2IwXjAxYC9jMDJeYSNhajFpY15gLi1fLS0zLS9zcw%3D%3D&btag=80000e00018000&dy_q=1769394485&l=20260126102804E15861375DE93B992FFD"
+  },
+  {
+    "game_name": "合合合神鲲",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"玩家扮演一个小星球，在太空中通过滑动屏幕来移动。你需要操控自己的星球去吞噬那些体积比你小的星球，每吞噬一个，自己就会变得更大。同时，必须小心躲避那些比你大的星球，一旦撞上就会游戏失败。游戏是关卡制的，目标就是通过不断“大吃小”来成长，最终完成关卡。\",\n  \"baseline_game\": \"街机动作 > IO/大乱斗 > 吞噬进化\",\n  \"innovation_points\": [\n    \"将经典IO游戏的多人在线竞技玩法，改造成了单人闯关的模式。\",\n    \"游戏主题从抽象的细胞或球体，包装为更具象的星球宇宙进化题材。\",\n    \"引入了“大小翻倍”等观看广告即可使用的强力道具，降低了通关难度。\",\n    \"简化了IO游戏中的分裂、吐球等复杂操作，只保留移动和吞噬的核心。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "玩家扮演一个小星球，在太空中通过滑动屏幕来移动。你需要操控自己的星球去吞噬那些体积比你小的星球，每吞噬一个，自己就会变得更大。同时，必须小心躲避那些比你大的星球，一旦撞上就会游戏失败。游戏是关卡制的，目标就是通过不断“大吃小”来成长，最终完成关卡。",
+      "baseline_game": "街机动作 > IO/大乱斗 > 吞噬进化",
+      "innovation_points": [
+        "将经典IO游戏的多人在线竞技玩法，改造成了单人闯关的模式。",
+        "游戏主题从抽象的细胞或球体，包装为更具象的星球宇宙进化题材。",
+        "引入了“大小翻倍”等观看广告即可使用的强力道具，降低了通关难度。",
+        "简化了IO游戏中的分裂、吐球等复杂操作，只保留移动和吞噬的核心。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 412,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ua_b51fb718-48ec-43a1-93f2-bbc4f12c611g",
+      "img_v3_02ua_b2f1d5be-d99d-42db-9f59-34b46eed02cg",
+      "img_v3_02ua_49db894a-2136-44ce-b823-8ce83a77d60g"
+    ],
+    "screenshot_image_key": "img_v3_02ua_b51fb718-48ec-43a1-93f2-bbc4f12c611g",
+    "game_rank": 7,
+    "game_company": "--",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "抖音小游戏",
+    "source": "引力引擎",
+    "board_name": "抖音小游戏周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1PmjLzlBlmbrSkdpbaTaXwZ4b9ML7xGhE",
+    "share_url": "https://www.iesdouyin.com/share/video/7383676971777035539/?region=US&mid=7217733724639594499&u_code=0&did=MS4wLjABAAAAyQ7m4DwxaQ6zzMMgLGcnB-gZWHurYIuIaVyxor1_aGMt3eLiw2hG97R3nRhDDp7I&iid=MS4wLjABAAAAf4LnOfNLJWDJ-EUTZogjPqxfe3OQkCJHL4HxcU8rOSbuBPyIWO94he95dXM60bvz&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=2RmJEDThEg9oSKYWpIGiQJ0wOFEUzB9S4MceS5W8SVk-&share_version=320900&ts=1769394571&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/005926718377309c0513de0b23cc6fa6/6976dfb0/video/tos/cn/tos-cn-ve-15c001-alinc2/oYDWUE4VcICecFmBKEbfTiJVfYBkC7ABxMQBAB/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=255&bt=255&cs=5&ds=3&eid=23808&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFHWW_hd-IMLFa0uwUBMEq&mime_type=video_mp4&qs=15&rc=ODUzOTc0ZmYzNzU5OGQ5OUBpMzg3ZHY5cjo0czMzNGkzM0AxMi8yLTUuXmIxYzYwYGIyYSM2bG4tMmQ0YnBgLS1kLS9zcw%3D%3D&btag=80000e00010000&dy_q=1769394571&feature_id=ee0e3bab4ed59d68553829c89e190026&l=20260126102930A6661D70F2517B0ABE0E",
+    "video_url": "https://v3-search.douyinvod.com/c04d66f5f48f0194b469bad156f5eb3a/6976dfb0/video/tos/cn/tos-cn-ve-0015c800/owIzhBAF4nrRMXyZdDEQRAiFgPgPI6H8SiQNA/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=1524&bt=1524&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFHWW_hd-IMLFa0uwUBMEq&mime_type=video_mp4&qs=0&rc=OmhlNDY8PDhmOWdnaDkzOEBpMzg3ZHY5cjo0czMzNGkzM0AxLTFhNjE1NTIxYS5eXjQtYSM2bG4tMmQ0YnBgLS1kLS9zcw%3D%3D&btag=80000e00010000&dy_q=1769394571&feature_id=f0150a16a324336cda5d6dd0b69ed299&l=20260126102930A6661D70F2517B0ABE0E"
+  },
+  {
+    "game_name": "我不是菜鸟",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"玩家扮演一只小鸟，通过点击屏幕来控制它飞向屏幕中央旋转的“水果轮盘”。主要目标是吃掉轮盘上所有的好水果（如樱桃），同时要精准地避开坏掉的水果或炸弹等障碍物。游戏中还可以通过吃掉轮盘上的青虫来收集奖励。当轮盘上的所有目标都被成功清除后，即可通关进入下一关。\",\n  \"baseline_game\": \"街机动作 > 技巧/平台 > 精确控制\",\n  \"innovation_points\": [\n    \"将传统的投掷物（如飞刀、小球）替换为玩家控制的角色本身（小鸟），增强了代入感。\",\n    \"目标不再是单一的整体，而是由多个可被逐一破坏的元素（水果）构成，进度反馈更直观。\",\n    \"在目标中混合了奖励物（青虫）和障碍物（炸弹、坏水果），增加了简单的策略选择。\",\n    \"游戏主题包装为“小鸟吃水果”，将抽象的精确打击玩法变得更生动有趣。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "玩家扮演一只小鸟，通过点击屏幕来控制它飞向屏幕中央旋转的“水果轮盘”。主要目标是吃掉轮盘上所有的好水果（如樱桃），同时要精准地避开坏掉的水果或炸弹等障碍物。游戏中还可以通过吃掉轮盘上的青虫来收集奖励。当轮盘上的所有目标都被成功清除后，即可通关进入下一关。",
+      "baseline_game": "街机动作 > 技巧/平台 > 精确控制",
+      "innovation_points": [
+        "将传统的投掷物（如飞刀、小球）替换为玩家控制的角色本身（小鸟），增强了代入感。",
+        "目标不再是单一的整体，而是由多个可被逐一破坏的元素（水果）构成，进度反馈更直观。",
+        "在目标中混合了奖励物（青虫）和障碍物（炸弹、坏水果），增加了简单的策略选择。",
+        "游戏主题包装为“小鸟吃水果”，将抽象的精确打击玩法变得更生动有趣。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 441,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ua_70d77bba-c7dc-4c2a-97e7-a4168d693e2g",
+      "img_v3_02ua_2b663da9-f942-49d2-9cad-cd7999d73c2g",
+      "img_v3_02ua_37b744fe-8888-4a6f-ad69-3ebc7edcb03g"
+    ],
+    "screenshot_image_key": "img_v3_02ua_70d77bba-c7dc-4c2a-97e7-a4168d693e2g",
+    "game_rank": 9,
+    "game_company": "--",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "抖音小游戏",
+    "source": "引力引擎",
+    "board_name": "抖音小游戏周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1oR_I-g7WRJJgZOGEXt2jF0XVE6UyC7fX",
+    "share_url": "https://www.iesdouyin.com/share/video/7599289483179440783/?region=US&mid=7599289408764169010&u_code=0&did=MS4wLjABAAAA3pqZiJUpZ3RsyIPjUYPxyW8fr4wjV9PNOdyEBiFSZssuI8OmAkyGgWB2MpLhiNAD&iid=MS4wLjABAAAAJcdzG_bnAelX0jky-jZQd0JtCmWxty91eXUSvqUusBLeQTjYRHmCJq9NOweZP9Mr&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=C1b3NCLBydX8UiFn8e9RoBO.st4Xq60f_eAAhLRwqhY-&share_version=320900&ts=1769394611&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/eca6f7af3f6957698520d18a27e720a5/6976dff7/video/tos/cn/tos-cn-ve-15/owCleAG7vGJBxL7eSdxzLQEBAIb2CQXEB4eDIT/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=293&bt=293&cs=2&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFvWW_hd-I9VKmCuwUBMEq&mime_type=video_mp4&qs=15&rc=OWhlNmlnZjU8ZzU8MzgzZUBpamtzZHk5cng0ODMzNGkzM0BgNDMzL2MzXzUxLTFiX2AyYSNrNDA0MmRjZm9hLS1kLS9zcw%3D%3D&btag=80000e00020000&dy_q=1769394611&feature_id=b38008770b4e09863331b14b26bcdc23&l=20260126103010BB01FC54A2CC83AE2F64",
+    "video_url": "https://v3-search.douyinvod.com/ae568c80bc4d2d5949d6bc44df4afb6d/6976dff7/video/tos/cn/tos-cn-ve-15/osvLUQEGSCGexmTLID2DFAIdBBe2e7dAQ7EZpz/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=603&bt=603&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFvWW_hd-I9VKmCuwUBMEq&mime_type=video_mp4&qs=0&rc=OjU1PGZkM2RnZWg1Z2U5NkBpamtzZHk5cng0ODMzNGkzM0AvMzYvLi00XzExYzAtMC0vYSNrNDA0MmRjZm9hLS1kLS9zcw%3D%3D&btag=80000e00020000&dy_q=1769394611&feature_id=fea919893f650a8c49286568590446ef&l=20260126103010BB01FC54A2CC83AE2F64"
+  },
+  {
+    "game_name": "点线落",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"玩家面对一个由点和线组成的、看似缠绕的图形。你需要通过点击特定的“释放点”（白色空心圆点），让它们在重力作用下自然下落。这些点的下落会拉伸与之相连的线条，从而让整个图形结构慢慢展开。最终目标是通过选择正确的点击顺序，使图形完全展开，所有线条互不交叉，即可过关。\",\n  \"baseline_game\": \"益智解谜 > 脑力逻辑 > 物理谜题\",\n  \"innovation_points\": [\n    \"将传统物理谜题“引导物体到达终点”的目标，创新为“解开缠绕的线状结构”。\",\n    \"核心交互从割绳子或挖土，简化为点击释放固定点，让物理引擎自动完成展开过程。\",\n    \"采用了极简主义的点线几何美术风格，营造出一种平静、专注的解谜氛围。\",\n    \"谜题的设计重点考验玩家的空间想象力，需要预判结构在释放点后如何展开。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "玩家面对一个由点和线组成的、看似缠绕的图形。你需要通过点击特定的“释放点”（白色空心圆点），让它们在重力作用下自然下落。这些点的下落会拉伸与之相连的线条，从而让整个图形结构慢慢展开。最终目标是通过选择正确的点击顺序，使图形完全展开，所有线条互不交叉，即可过关。",
+      "baseline_game": "益智解谜 > 脑力逻辑 > 物理谜题",
+      "innovation_points": [
+        "将传统物理谜题“引导物体到达终点”的目标，创新为“解开缠绕的线状结构”。",
+        "核心交互从割绳子或挖土，简化为点击释放固定点，让物理引擎自动完成展开过程。",
+        "采用了极简主义的点线几何美术风格，营造出一种平静、专注的解谜氛围。",
+        "谜题的设计重点考验玩家的空间想象力，需要预判结构在释放点后如何展开。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 433,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ua_ca2fcf80-587b-464d-873b-4ae3e49848bg",
+      "img_v3_02ua_a4319ec6-7af6-4574-baf4-30d8fd806aeg",
+      "img_v3_02ua_30d6208c-ebc2-4356-bc53-6b0578669c0g"
+    ],
+    "screenshot_image_key": "img_v3_02ua_ca2fcf80-587b-464d-873b-4ae3e49848bg",
+    "game_rank": 11,
+    "game_company": "--",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "抖音小游戏",
+    "source": "引力引擎",
+    "board_name": "抖音小游戏周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1FqV0-abEfUS-R5cO1GjRa0TNcdtPgiVD",
+    "share_url": "https://www.iesdouyin.com/share/video/7598866828002284635/?region=US&mid=7598866812969782058&u_code=0&did=MS4wLjABAAAALsM759Ji7KT4R6e1Sak1DonrdlENyFceBwFrQ7HCTWs&iid=MS4wLjABAAAA_C3V3kFzQnN0BMLcUU4iM25tEGCvaDyHbGYjiu3GfAg&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=CtpJNKgQDWTFhDXfV6R_UXGv54UMZTk7SyLQ5pogfpY-&share_version=320900&ts=1769394639&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/384810bb413ad232b1ad686e2493cc11/6976dff4/video/tos/cn/tos-cn-ve-15c000-ce/oEIGS6JuUf7TBDUkexIJhAmAIjOOqX7QrgeL7N/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=116&bt=116&cs=5&ds=3&eid=45312&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFOUW_hd-IB1VjqkwUBMEq&mime_type=video_mp4&qs=15&rc=Zjw4ODM4PGk8ZWZpZWRnM0BpM2V4bHU5cjo8ODMzbGkzNUAtMWBeLi8vXi4xYzQwMDBeYSNpLWtoMmRjZm5hLS1kLTRzcw%3D%3D&btag=80000e00010000&dy_q=1769394639&feature_id=c21aebac782617d89b11643764052a1a&l=20260126103038655D536E58EF5CAD1B60",
+    "video_url": "https://v3-search.douyinvod.com/0a5718592ad767f43c1bc2578d8bcee5/6976dff4/video/tos/cn/tos-cn-ve-15c000-ce/oEZInEmXwAkAES3L9FfVJpDBmBdpqEAgSIfdQ0/?a=615883&ch=11&cr=13&dr=0&lr=all&cd=0%7C0%7C0%7C&cv=1&br=423&bt=423&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFOUW_hd-IB1VjqkwUBMEq&mime_type=video_mp4&qs=0&rc=Ojg0Omc6NTZnN2dmNmVkaUBpM2V4bHU5cjo8ODMzbGkzNUBiXmNeLTEvXmExLzUuNDUyYSNpLWtoMmRjZm5hLS1kLTRzcw%3D%3D&btag=80000e00010000&dy_q=1769394639&feature_id=fea919893f650a8c49286568590446ef&l=20260126103038655D536E58EF5CAD1B60"
+  },
+  {
+    "game_name": "不服试试",
+    "analysis": "```json\n{\n  \"is_new_entry\": true,\n  \"core_gameplay\": \"玩家通过点击屏幕，控制一只小鸟向屏幕中心的旋转目标发起攻击。游戏的目标是不断啄食，直到将整个目标完全摧毁。在攻击时，玩家需要把握好时机，精准地攻击目标上的可破坏部分，同时要避开TNT炸药等危险物品。关卡中还散布着青虫、宝石等奖励，成功攻击并收集它们可以获得分数或道具。当代表目标生命值的进度条被打满后，即可通关。\",\n  \"baseline_game\": \"街机动作 > 技巧/平台 > 精确控制\",\n  \"innovation_points\": [\n    \"游戏目标从“插入 projectiles”变为“完全摧毁”目标，并用进度条直观展示破坏进程。\",\n    \"将传统的刀子等无生命发射物，替换为有生命感和可爱画风的小鸟角色。\",\n    \"旋转目标的设计更复杂，集成了可破坏部分、障碍物（TNT）和奖励物（青虫）。\",\n    \"引入了收集玩法，玩家在攻击和躲避的同时，还需要策略性地获取奖励物。\"\n  ]\n}\n```",
+    "analysis_data": {
+      "is_new_entry": true,
+      "core_gameplay": "玩家通过点击屏幕，控制一只小鸟向屏幕中心的旋转目标发起攻击。游戏的目标是不断啄食，直到将整个目标完全摧毁。在攻击时，玩家需要把握好时机，精准地攻击目标上的可破坏部分，同时要避开TNT炸药等危险物品。关卡中还散布着青虫、宝石等奖励，成功攻击并收集它们可以获得分数或道具。当代表目标生命值的进度条被打满后，即可通关。",
+      "baseline_game": "街机动作 > 技巧/平台 > 精确控制",
+      "innovation_points": [
+        "游戏目标从“插入 projectiles”变为“完全摧毁”目标，并用进度条直观展示破坏进程。",
+        "将传统的刀子等无生命发射物，替换为有生命感和可爱画风的小鸟角色。",
+        "旋转目标的设计更复杂，集成了可破坏部分、障碍物（TNT）和奖励物（青虫）。",
+        "引入了收集玩法，玩家在攻击和躲避的同时，还需要策略性地获取奖励物。"
+      ]
+    },
+    "model_used": "google/gemini-2.5-pro",
+    "status": "success",
+    "finish_reason": "stop",
+    "text_length": 468,
+    "change_type": "新进榜",
+    "is_new_entry": true,
+    "screenshot_image_keys": [
+      "img_v3_02ua_f76fb4d3-4f63-445e-9796-244fc938a04g",
+      "img_v3_02ua_e240e0bc-b9e4-440c-ba1b-6709bb575b7g",
+      "img_v3_02ua_f1c8345b-246c-406f-b1e0-bd8be6b32b0g"
+    ],
+    "screenshot_image_key": "img_v3_02ua_f76fb4d3-4f63-445e-9796-244fc938a04g",
+    "game_rank": 16,
+    "game_company": "--",
+    "rank_change": "新进榜",
+    "monitor_date": "2026-01-27",
+    "platform": "抖音小游戏",
+    "source": "引力引擎",
+    "board_name": "抖音小游戏周榜",
+    "gdrive_url": "https://drive.google.com/uc?export=download&id=1FgYINILCvjE8Cw9dRG0O7OwNPm17wHNF",
+    "share_url": "https://www.iesdouyin.com/share/video/7599487215614141945/?region=US&mid=7599487155840322354&u_code=0&did=MS4wLjABAAAAZQWFlU2rXx4A9DaLbMeq9EjdJXnImQc2jTJ8re5iIirTUBwyZHroD1VvhdUGUMZI&iid=MS4wLjABAAAATnslbp1I-JXwyQeuHMMnLS8Yq1j2MSTOZOl7kq7Sj79pmd2tOKYM3x5jA2DMYRig&with_sec_did=1&video_share_track_ver=&titleType=title&share_sign=TMFHeSecjMc1cGPzM7emmRWlJKfBKN0NqfiIyWPimx8-&share_version=320900&ts=1769394733&from_aid=615883&from_ssr=1&share_track_info=%7B%22link_description_type%22%3A%22%22%7D",
+    "original_video_url": "https://v3-search.douyinvod.com/2ee942e7eef551af51972cebfed59dcd/6976e04a/video/tos/cn/tos-cn-ve-15c000-ce/oQ5WXhLAPI9diB9ABBJlQE32XMPWaPNWsRizb/?a=615883&ch=11&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&cv=1&br=818&bt=818&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFTNW_hd-IJmVjqkwUBMEq&mime_type=video_mp4&qs=0&rc=Zmg1NDVlPDc4N2c1aGlnZkBpM3d3bHM5cnBmODMzbGkzNEAuXmI0XzIuXjAxLzI0MjQ0YSNqb3JyMmQ0bm9hLS1kLWJzcw%3D%3D&btag=80000e00008000&dy_q=1769394733&feature_id=fea919893f650a8c49286568590446ef&l=2026012610321239397DEE57EF98CFFB72",
+    "video_url": "https://v3-search.douyinvod.com/2ee942e7eef551af51972cebfed59dcd/6976e04a/video/tos/cn/tos-cn-ve-15c000-ce/oQ5WXhLAPI9diB9ABBJlQE32XMPWaPNWsRizb/?a=615883&ch=11&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&cv=1&br=818&bt=818&cs=0&ds=3&ft=Xo0TLaZqsQOCCp5Sup-Q6_Mme-rLWa5eFTNW_hd-IJmVjqkwUBMEq&mime_type=video_mp4&qs=0&rc=Zmg1NDVlPDc4N2c1aGlnZkBpM3d3bHM5cnBmODMzbGkzNEAuXmI0XzIuXjAxLzI0MjQ0YSNqb3JyMmQ0bm9hLS1kLWJzcw%3D%3D&btag=80000e00008000&dy_q=1769394733&feature_id=fea919893f650a8c49286568590446ef&l=2026012610321239397DEE57EF98CFFB72"
+  }
+]
