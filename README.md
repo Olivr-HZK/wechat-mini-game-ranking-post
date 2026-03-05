@@ -2,6 +2,37 @@
 
 这是一个自动化工作流系统，用于分析小游戏热榜上的游戏玩法，并生成日报通过飞书机器人发送。
 
+## 快速开始
+
+1. 克隆代码后，在项目根目录创建并激活虚拟环境（示例，以 Python 3 为例）：
+
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows 使用 .venv\\Scripts\\activate
+```
+
+2. 安装依赖（包括爬虫与视频分析相关依赖）：
+
+```bash
+pip install -r requirements.txt
+playwright install chromium  # 安装浏览器内核，用于爬取周榜
+```
+
+3. 按照 `env_example.txt` 创建并填写 `.env`，配置 OpenRouter、飞书 Webhook、抖音 API Token 等。
+
+4. 运行完整工作流：
+
+```bash
+python main.py
+```
+
+5. 若只想按周爬取引力引擎周榜并写入数据库，可使用每周脚本（周一早上运行效果最佳）：
+
+```bash
+./scripts/weekly_scrape_and_import.sh               # 使用当天作为参考日期
+./scripts/weekly_scrape_and_import.sh 2026-02-24    # 指定监控日期
+```
+
 ## 功能模块
 
 1. **排行提取模块** (`modules/rank_extractor.py`)
@@ -35,12 +66,7 @@
 
 ## 安装
 
-1. 安装依赖：
-```bash
-pip install -r requirements.txt
-```
-
-2. 配置环境变量：
+1. 配置环境变量：
 创建 `.env` 文件（参考 `env_example.txt`）：
 ```
 OPENROUTER_API_KEY=your_openrouter_api_key_here
@@ -57,15 +83,6 @@ MAX_GAMES_TO_PROCESS=5
 3. 进入用户中心，点击"API令牌"菜单
 4. 创建API令牌并复制
 5. 将令牌配置到 `.env` 文件中的 `DOUYIN_API_TOKEN`
-
-## 安装依赖
-
-```bash
-pip install -r requirements.txt
-
-# 安装 Playwright 浏览器（用于爬取排行榜）
-playwright install chromium
-```
 
 ## 使用方法
 
