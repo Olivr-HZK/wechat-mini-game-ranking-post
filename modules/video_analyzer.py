@@ -44,6 +44,32 @@ class VideoAnalyzer:
         else:
             self.db = None
     
+    @staticmethod
+    def _is_new_entry(rank_change: Optional[str]) -> bool:
+        """是否为「新进榜」游戏。"""
+        if not rank_change:
+            return False
+        s = (rank_change or "").strip()
+        return "新进榜" in s or "新入榜" in s
+
+    @staticmethod
+    def _is_rank_up(rank_change: Optional[str]) -> bool:
+        """是否为「排名提升/飙升」游戏（非新进榜但排名上升）。"""
+        if not rank_change:
+            return False
+        s = (rank_change or "").strip()
+        if VideoAnalyzer._is_new_entry(s):
+            return False
+        if "↑" in s:
+            return True
+        match = re.search(r"([+-]?\d+)", s)
+        if match:
+            try:
+                return int(match.group(1)) > 0
+            except ValueError:
+                pass
+        return False
+
     def _encode_video_to_base64(self, video_path: str) -> Optional[str]:
         """
         将视频文件编码为base64（已废弃，GPT-4o不支持直接传递视频）
@@ -230,44 +256,79 @@ class VideoAnalyzer:
                 print(f"  警告：未提供视频URL，尝试使用本地文件（不推荐）")
                 use_url = False
             
+            # 读取GAME_TYPE.json作为基线游戏参考
+            game_type_json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "GAME_TYPE.json")
+            baseline_reference = ""
+            try:
+                if os.path.exists(game_type_json_path):
+                    with open(game_type_json_path, 'r', encoding='utf-8') as f:
+                        game_types = json.load(f)
+                        # 提取所有基线游戏分类信息
+                        baseline_list = []
+                        for category in game_types.get("休闲游戏分类", []):
+                            first_level = category.get("一级分类", "")
+                            for second_level in category.get("二级分类", []):
+                                second_name = second_level.get("名称", "")
+                                for third_level in second_level.get("三级细分", []):
+                                    third_name = third_level.get("名称", "")
+                                    desc = third_level.get("描述", "")
+                                    example = third_level.get("代表作品", "")
+                                    baseline_list.append(f"- {first_level} > {second_name} > {third_name}：{desc}（代表作品：{example}）")
+                        if baseline_list:
+                            baseline_reference = "\n".join(baseline_list[:50])  # 限制长度
+            except Exception as e:
+                print(f"  警告：读取GAME_TYPE.json失败：{e}")
+            
+            # 根据排名变化类型选择分析重点
+            rank_change = (game_info or {}).get("排名变化") or ""
+            is_new_entry = self._is_new_entry(rank_change)
+            is_rank_up = self._is_rank_up(rank_change)
+            
+            if is_new_entry:
+                focus_instruction = """【本游戏为新进榜游戏】请正常分析其核心玩法、基线游戏与创新点。在输出的 JSON 中可增加顶层字段 "is_new_entry": true 表示新游戏。"""
+            elif is_rank_up:
+                focus_instruction = """【本游戏为排名提升/飙升游戏】请重点观察视频中是否存在新玩法或明显创新：
+- 若存在新玩法/新内容：正常输出 core_gameplay、baseline_game、innovation_points，并可在 innovation_points 中强调本次新玩法。
+- 若仍是老玩法、无显著创新：core_gameplay 与 baseline_game 照常写；在 innovation_points 中只保留一条："未发现新玩法，建议手动观察该游戏动态"。并增加顶层字段 "suggest_manual_watch": true。"""
+            else:
+                focus_instruction = """请正常分析核心玩法、基线游戏与创新点。"""
+            
             # 构建API请求
-            # 要求返回结构化且可解析的JSON；输出只包含两部分：核心玩法 +（基线品类&相对微调创新）
+            # 要求返回结构化且可解析的JSON；只输出三个部分：核心玩法、基线游戏、基于基线游戏的创新点
             prompt = f"""你是一名“小游戏玩法拆解 & 品类微创新”分析师。
 
-本次只输出两部分：
-1) 核心玩法拆解
-2) 基线游戏类型 + 相较于基线的微调创新点
+{focus_instruction}
+
+本次只输出三个部分（以及上述情形下的可选字段）：
+1) 核心玩法（用通俗易懂的话说明游戏怎么玩）
+2) 基线游戏（参考下面的基线游戏分类，找出最相似的基线游戏类型）
+3) 基于基线游戏的创新点（说明相比基线游戏做了哪些改进或创新）
 
 不要做“吸引力分析/为什么好玩/目标用户/留存点”等内容，也不要输出相关字段。
 
 游戏名称：{game_name}
 游戏类型：{game_info.get('游戏类型', '未知') if game_info else '未知'}
+排名变化：{rank_change or '--'}
 
-请仔细观看视频内容，然后以JSON格式返回分析结果（严格JSON，可直接解析；只允许下面这两个顶层字段）：
+基线游戏分类参考（请从中选择最相似的基线游戏类型）：
+{baseline_reference if baseline_reference else "请根据常见游戏类型判断（如：三消、合成、跑酷、射击、解谜等）"}
+
+请仔细观看视频内容，然后以JSON格式返回分析结果（严格JSON，可直接解析；至少包含下面三个顶层字段）：
 {{
-  "core_gameplay": {{
-    "mechanism": "用一段话整体说明核心玩法机制 + 操作方式 + 基本规则 + 主要特点（合并在一起，尽量精炼）",
-    "operation": "可选的简短补充（1-2 句），没有补充可留空字符串",
-    "rules": "可选的简短补充（1-2 句），没有补充可留空字符串",
-    "features": "可选的简短补充（1-2 句），没有补充可留空字符串"
-  }},
-  "baseline_and_innovation": {{
-    "base_genre": "判断该游戏属于哪类基线品类/基类玩法（例如：三消/合成/塔防/跑酷/射击/IO/解谜/放置/棋牌等；不确定就写“未知”）",
-    "baseline_loop": "用 1 段话概括该品类‘基线范式’的常见核心循环/常见机制（60-120字）",
-    "micro_innovations": [
-      "列出 3-5 条相对基线的微调创新点（每条不超过 30 字，要求具体，不要空泛）"
-    ]
-  }}
+  "core_gameplay": "用通俗易懂的1-2段话说明核心玩法，包括：玩家要做什么、怎么操作、主要目标是什么。要求简短（80-150字），避免专业术语，用大白话解释。",
+  "baseline_game": "基线游戏类型，格式：一级分类 > 二级分类 > 三级细分（例如：益智解谜 > 消除类 > 交换三消），如果找不到完全匹配的，就写最接近的分类，不确定就写“未知”。",
+  "innovation_points": [
+    "列出 3-5 条基于基线游戏的创新点，每条用一句话说明（20-40字），要具体说明做了什么改进，不要空泛。若为排名提升且无新玩法，则只保留一条：未发现新玩法，建议手动观察该游戏动态。"
+  ]
 }}
 
 重要要求：
-1. **两段式输出**：只输出 `core_gameplay` 和 `baseline_and_innovation`，不要出现其他顶层字段。
-2. **微创新优先**：先明确基线品类与基线循环，再讲相对基线的“微调创新点”（规则微调/节奏微调/资源微调/关卡结构微调/反馈与操作微调等）。
-
-3. **描述长度控制（简洁但清楚）**：
-   - **core_gameplay.mechanism**：1 段整体文字，推荐 120-180 字，覆盖机制 + 操作 + 规则 + 特点
-   - **core_gameplay.operation / rules / features**：如果没有额外信息，可以留空字符串 `""`，有补充时每个字段不超过 50 字
-   - **baseline_and_innovation.micro_innovations**：3-5 条，务必具体，不要空泛词（如“玩法创新”“体验更好”）
+1. **三个部分输出**：至少输出 `core_gameplay`、`baseline_game` 和 `innovation_points`，不要出现其他无关顶层字段。
+2. **通俗易懂**：所有描述都要用简单直白的话，避免专业术语，让普通人也能看懂。
+3. **简短精炼**：
+   - **core_gameplay**：80-150字，用1-2段话说明怎么玩
+   - **baseline_game**：直接写分类路径，如"益智解谜 > 消除类 > 交换三消"
+   - **innovation_points**：3-5条（或按上述情形为1条），每条20-40字，要具体说明创新点
 
 4. **必须仔细观察视频中的实际游戏画面和操作**
 
@@ -277,19 +338,16 @@ class VideoAnalyzer:
 
 7. **所有描述都要基于视频中的实际内容，不要编造信息**
 
-示例格式（玩法类似知名游戏时，注意结构精简）：
+示例格式：
 {{
-  "core_gameplay": {{
-    "mechanism": "玩法整体类似英雄联盟手游版，为 5v5 MOBA 推塔对战。玩家选择不同定位的英雄，在三路地图中通过击杀小兵、野怪和敌方英雄获取经济与经验，购买装备强化自己，最终摧毁敌方基地水晶获胜。本作节奏更快、单局时长更短，操作界面更简洁，对走位与技能释放做了自动辅助，更偏向轻度玩家。",
-    "operation": "",
-    "rules": "",
-    "features": ""
-  }},
-  "baseline_and_innovation": {{
-    "base_genre": "MOBA",
-    "baseline_loop": "选英雄-对线发育-团战推塔-摧毁基地；依赖经济运营与团战推进。",
-    "micro_innovations": ["更短局时长/更快节奏", "走位与技能释放辅助", "更紧凑的地图资源点"]
-  }}
+  "core_gameplay": "玩家通过点击屏幕发射小鸟攻击旋转的目标。需要找准时机在目标旋转的间隙中攻击，避开TNT等危险障碍物，收集青虫和宝石等奖励。通过不断攻击将目标的生命值清空即可通关。操作简单，只需要点击屏幕即可。",
+  "baseline_game": "街机动作 > 技巧/平台 > 精确控制",
+  "innovation_points": [
+    "将传统射击改为角色本身作为发射物",
+    "目标从单一变为可被逐步破坏的多层结构",
+    "增加了需要躲避的危险障碍物和可收集的奖励物",
+    "引入了生命值进度条，从插满变为摧毁目标"
+  ]
 }}"""
             
             headers = {
@@ -360,19 +418,35 @@ class VideoAnalyzer:
                 "max_tokens": 12000  # 增加token限制，确保详细分析结果完整返回
             }
             
-            # 发送API请求
+            # 发送API请求（增加简单重试，缓解偶发的 SSL/网络错误）
             print(f"  发送API请求到 {self.base_url}/chat/completions...")
             print(f"  注意：视频分析可能需要较长时间，请耐心等待...")
             
-            # 视频分析可能需要更长时间
             timeout = 180 if use_url else (180 if video_file_size > 10 else 120)
-            
-            response = requests.post(
-                f"{self.base_url}/chat/completions",
-                headers=headers,
-                json=payload,
-                timeout=timeout
-            )
+
+            response = None
+            last_err = None
+            for attempt in range(3):
+                try:
+                    response = requests.post(
+                        f"{self.base_url}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                        timeout=timeout,
+                    )
+                    break
+                except requests.exceptions.RequestException as e:
+                    last_err = e
+                    print(f"  ⚠ 与 OpenRouter 通信失败（第 {attempt + 1}/3 次）：{e}")
+                    if attempt < 2:
+                        print("    等待 5 秒后重试...")
+                        import time as _time
+                        _time.sleep(5)
+                    else:
+                        print("    多次重试仍失败，将退回到 Mock 分析结果。")
+            if response is None:
+                # 所有重试都失败，走统一异常处理
+                raise last_err if last_err else RuntimeError("与 OpenRouter 通信失败（未知错误）")
             
             if response.status_code == 200:
                 result = response.json()
@@ -412,6 +486,13 @@ class VideoAnalyzer:
                         if success:
                             print(f"  ✓ 分析结果已保存到数据库")
                     
+                    # 排名变化类型，供周报与 weekly 简单表使用
+                    change_type = ""
+                    if is_new_entry:
+                        change_type = "新进榜"
+                    elif is_rank_up:
+                        change_type = "飙升"
+                    
                     return {
                         "game_name": game_name,
                         "analysis": analysis_text,  # 原始文本（已清理）
@@ -419,7 +500,9 @@ class VideoAnalyzer:
                         "model_used": self.model,
                         "status": "success",
                         "finish_reason": finish_reason,
-                        "text_length": text_length
+                        "text_length": text_length,
+                        "change_type": change_type,  # 新进榜 / 飙升 / 空
+                        "is_new_entry": is_new_entry,
                     }
                 else:
                     print(f"  API响应格式异常：{result}")
@@ -430,9 +513,10 @@ class VideoAnalyzer:
                 print(f"  API请求失败：HTTP {response.status_code}")
                 print(f"  错误信息：{error_text}")
                 
-                # 如果是400错误，可能是视频格式不支持，尝试只用文本
-                if response.status_code == 400:
-                    print("  尝试使用纯文本模式（不包含视频）...")
+                # 如果是 400 或 404（例如 Qwen 在 OpenRouter 上暂不支持 video_url），
+                # 说明当前模型不接受我们传的视频格式，退回到“纯文本模式”继续分析。
+                if response.status_code in (400, 404):
+                    print("  尝试使用纯文本模式（不包含视频，只基于游戏名称和类型进行分析）...")
                     text_only_payload = {
                         "model": self.model,
                         "messages": [
@@ -448,6 +532,9 @@ class VideoAnalyzer:
                         ],
                         "max_tokens": 8000  # 增加token限制
                     }
+                    # 打印发给 Qwen 的请求体（API 输入）
+                    print("  [Qwen API 输入] text_only_payload:")
+                    print(json.dumps(text_only_payload, ensure_ascii=False, indent=2))
                     
                     text_response = requests.post(
                         f"{self.base_url}/chat/completions",
@@ -458,6 +545,9 @@ class VideoAnalyzer:
                     
                     if text_response.status_code == 200:
                         text_result = text_response.json()
+                        # 打印 Qwen 返回的原始 JSON（API 输出）
+                        print("  [Qwen API 输出] text_result:")
+                        print(json.dumps(text_result, ensure_ascii=False, indent=2))
                         if 'choices' in text_result and len(text_result['choices']) > 0:
                             analysis_text = text_result['choices'][0]['message']['content']
                             print(f"  ✓ 文本模式分析成功")
@@ -716,42 +806,27 @@ class VideoAnalyzer:
             game_info: 游戏信息
         
         Returns:
-            Mock分析结果
+            Mock分析结果（新格式：三个部分）
         """
         game_type = game_info.get('游戏类型', '未知') if game_info else '未知'
         
-        mock_analysis = f"""
-【{game_name}】玩法解析
-
-游戏类型：{game_type}
-
-核心玩法：
-- 这是一个{game_type}类游戏，玩家需要通过操作完成各种挑战
-- 游戏操作简单易上手，适合各个年龄段的玩家
-- 具有丰富的关卡设计和挑战性
-
-操作方式：
-- 通过点击、滑动等简单操作进行游戏
-- 界面友好，操作流畅
-
-特色功能：
-- 精美的画面设计
-- 丰富的游戏内容
-- 社交分享功能
-
-难度特点：
-- 前期关卡较为简单，适合新手入门
-- 后期关卡难度逐渐提升，具有挑战性
-
-吸引点：
-- 简单易上手，容易产生成就感
-- 适合碎片化时间游玩
-- 具有社交属性，可以和朋友一起玩
-"""
+        # 新格式：只包含三个部分
+        mock_analysis_json = {
+            "core_gameplay": f"这是一个{game_type}类游戏。玩家通过简单的点击或滑动操作完成各种挑战任务。游戏规则清晰，目标明确，操作流畅。适合各个年龄段的玩家，可以轻松上手。",
+            "baseline_game": "未知",
+            "innovation_points": [
+                "游戏操作简单易上手",
+                "关卡设计丰富多样",
+                "适合碎片化时间游玩"
+            ]
+        }
+        
+        mock_analysis_text = json.dumps(mock_analysis_json, ensure_ascii=False, indent=2)
         
         return {
             "game_name": game_name,
-            "analysis": mock_analysis.strip(),
+            "analysis": mock_analysis_text,
+            "analysis_data": mock_analysis_json,
             "model_used": "mock",
             "status": "mock"
         }

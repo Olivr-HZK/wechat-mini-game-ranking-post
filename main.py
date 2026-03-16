@@ -4,10 +4,15 @@
 """
 import sys
 import os
+import time
+import sqlite3
+import json
 from datetime import datetime
 from typing import Optional, List, Dict
+from pathlib import Path
 from modules.rank_extractor import RankExtractor
 from modules.video_searcher import VideoSearcher
+from modules.youtube_searcher import YouTubeSearcher
 from modules.video_analyzer import VideoAnalyzer
 from modules.report_generator import ReportGenerator
 from modules.feishu_sender import FeishuSender
@@ -22,16 +27,29 @@ class GameAnalysisWorkflow:
         rankings_csv_path: Optional[str] = None,
         force_refresh_analysis: bool = False,
         skip_screenshots: bool = False,
+        platform: Optional[str] = None,
+        send_to: Optional[str] = None,
     ):
-        """初始化工作流"""
-        self.rank_extractor = RankExtractor(csv_path=rankings_csv_path) if rankings_csv_path else RankExtractor()
-        self.video_searcher = VideoSearcher()
+        """
+        初始化工作流
+        
+        Args:
+            rankings_csv_path: CSV文件路径
+            force_refresh_analysis: 是否强制刷新分析
+            skip_screenshots: 是否跳过截图
+            platform: 平台类型，'dy'表示抖音，'wx'表示微信小游戏，None表示不限制
+            send_to: 发送目标，'feishu'/'wecom'/'sheets'/'all'，None表示默认（飞书）
+        """
+        self.rank_extractor = RankExtractor(csv_path=rankings_csv_path, platform=platform) if rankings_csv_path else RankExtractor(platform=platform)
+        self.video_searcher = VideoSearcher()  # 用于抖音/微信小游戏
+        self.youtube_searcher = YouTubeSearcher()  # 用于 SensorTower 游戏
         self.video_analyzer = VideoAnalyzer()
         self.report_generator = ReportGenerator()
         self.feishu_sender = FeishuSender()
         # 工作流可选行为
         self.force_refresh_analysis = bool(force_refresh_analysis)
         self.skip_screenshots = bool(skip_screenshots)
+        self.send_to = send_to or 'feishu'  # 默认发送到飞书
     
     def _extract_and_upload_screenshot(self, video_path: str, game_name: str) -> Optional[List[str]]:
         """
@@ -236,44 +254,112 @@ class GameAnalysisWorkflow:
     
     def step0_scrape_rankings(self) -> bool:
         """
-        步骤0：检查游戏排行榜CSV文件
+        步骤0：检查游戏排行榜CSV文件（多平台汇总）
         
         Returns:
             是否成功
         """
-        print("【步骤0】检查游戏排行榜CSV文件...")
+        print("【步骤0】检查游戏排行榜CSV文件（多平台汇总）...")
         try:
             import os
+            from pathlib import Path
+            
             extractor = self.rank_extractor
-            csv_path = extractor.get_effective_csv_path()
-
-            if not os.path.exists(csv_path):
-                print(f"⚠ CSV文件不存在：{csv_path}")
-                print("  提示：请先运行 gravity 爬取脚本，生成 data/人气榜/<日期>.csv（或设置环境变量 RANKINGS_CSV_PATH 指向CSV/目录）")
+            base_dir = Path(extractor.csv_path or config.RANKINGS_CSV_PATH)
+            
+            # 如果指定的是文件，直接检查
+            if base_dir.exists() and base_dir.is_file():
+                if not os.path.exists(str(base_dir)):
+                    print(f"⚠ CSV文件不存在：{base_dir}")
+                    return False
+                games = extractor.get_top_games(top_n=1)
+                if not games:
+                    print(f"⚠ CSV文件格式不正确或为空：{base_dir}")
+                    return False
+                all_games = extractor.get_top_games(top_n=None)
+                game_count = len(all_games) if all_games else 0
+                print(f"✓ CSV文件检查通过：{base_dir}")
+                print(f"  文件包含 {game_count} 个游戏\n")
+                return True
+            
+            # 如果是目录，检查所有平台的CSV文件
+            if not base_dir.exists() or not base_dir.is_dir():
+                base_dir = Path("data") / "人气榜"
+            
+            if not base_dir.exists() or not base_dir.is_dir():
+                print(f"⚠ 目录不存在：{base_dir}")
+                print("  提示：请先运行爬取脚本，生成 data/人气榜/<日期范围>/ 下的CSV文件")
                 return False
             
-            # 验证CSV文件格式并统计数量
-            games = extractor.get_top_games(top_n=1)  # 只读取一条验证格式
+            # 仅检查 dy/wx 的 CSV 文件（不包含 SensorTower）
+            all_csv_files = list(base_dir.rglob("*.csv"))
+            wx_files = [f for f in all_csv_files if f.name == "wx_anomalies.csv" or f.name.startswith("wx_")]
+            dy_files = [f for f in all_csv_files if f.name == "dy_anomalies.csv" or f.name.startswith("dy_")]
             
-            if not games:
-                print(f"⚠ CSV文件格式不正确或为空：{csv_path}")
-                print("  提示：当前工作流默认读取 data/人气榜 下最新CSV；请确保表头包含：排名,游戏名称,游戏类型,...")
+            found_platforms = []
+            total_games = 0
+            
+            # 检查微信小游戏（优先 wx_anomalies.csv）
+            wx_file = next((f for f in all_csv_files if f.name == "wx_anomalies.csv"), None) or (max(wx_files, key=lambda x: x.stat().st_mtime) if wx_files else None)
+            if wx_file:
+                try:
+                    import pandas as pd
+                    encodings = ['utf-8-sig', 'utf-8', 'gbk', 'gb2312']
+                    df = None
+                    for encoding in encodings:
+                        try:
+                            df = pd.read_csv(wx_file, encoding=encoding)
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    if df is not None and len(df) > 0:
+                        count = len(df)
+                        found_platforms.append(f"微信小游戏: {count}个游戏 ({wx_file.name})")
+                        total_games += count
+                except Exception as e:
+                    print(f"  ⚠ 读取微信小游戏榜单失败：{e}")
+            
+            # 检查抖音小游戏（优先 dy_anomalies.csv）
+            dy_file = next((f for f in all_csv_files if f.name == "dy_anomalies.csv"), None) or (max(dy_files, key=lambda x: x.stat().st_mtime) if dy_files else None)
+            if dy_file:
+                try:
+                    import pandas as pd
+                    encodings = ['utf-8-sig', 'utf-8', 'gbk', 'gb2312']
+                    df = None
+                    for encoding in encodings:
+                        try:
+                            df = pd.read_csv(dy_file, encoding=encoding)
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    if df is not None and len(df) > 0:
+                        count = len(df)
+                        found_platforms.append(f"抖音小游戏: {count}个游戏 ({dy_file.name})")
+                        total_games += count
+                except Exception as e:
+                    print(f"  ⚠ 读取抖音小游戏榜单失败：{e}")
+            
+            if not found_platforms:
+                print(f"⚠ 未找到 dy/wx 平台的CSV文件：{base_dir}")
+                print("  提示：请在 人气榜/<周范围>/ 下放置：")
+                print("    - wx_anomalies.csv（微信小游戏异动）")
+                print("    - dy_anomalies.csv（抖音小游戏异动）")
                 return False
             
-            # 统计总游戏数量（读取所有数据）
-            all_games = extractor.get_top_games(top_n=None)
-            game_count = len(all_games) if all_games else 0
-            
-            print(f"✓ CSV文件检查通过：{csv_path}")
-            print(f"  文件包含 {game_count} 个游戏\n")
+            print(f"✓ 找到 {len(found_platforms)} 个平台的排行榜：")
+            for platform_info in found_platforms:
+                print(f"  - {platform_info}")
+            print(f"  总计：{total_games} 个游戏（去重后可能更少）\n")
             return True
         except Exception as e:
             print(f"⚠ 检查CSV文件失败：{str(e)}\n")
+            import traceback
+            traceback.print_exc()
             return False
     
     def step1_extract_rankings(self, max_games: int = None) -> Optional[List[Dict]]:
         """
-        步骤1：提取游戏排行榜
+        步骤1：提取游戏排行榜（支持多平台汇总）
         
         Args:
             max_games: 最大处理游戏数量，如果为None则处理所有游戏
@@ -281,20 +367,21 @@ class GameAnalysisWorkflow:
         Returns:
             游戏列表，如果失败返回None
         """
-        print("【步骤1】提取游戏排行榜...")
-        # 如果max_games为None，处理所有游戏（不限制）
-        if max_games is None:
-            games = self.rank_extractor.get_top_games(top_n=None)  # None表示处理所有
-        else:
-            games = self.rank_extractor.get_top_games(top_n=max_games)
+        print("【步骤1】提取游戏排行榜（多平台汇总）...")
+        
+        # 使用新的多平台汇总方法
+        games = self.rank_extractor.extract_all_platforms_rankings(limit=max_games)
         
         if not games:
             print("错误：未能提取到游戏信息\n")
             return None
         
-        print(f"成功提取 {len(games)} 个游戏")
+        print(f"成功提取 {len(games)} 个游戏（多平台汇总）")
 
-        # 将排行榜字段写入数据库（A方式：覆盖排行榜字段，不影响视频/截图/玩法分析字段）
+        # 将排行榜写入weekly_rankings表
+        self._save_rankings_to_weekly_table()
+
+        # 将排行榜字段写入数据库（根据平台写入对应的排名字段）
         def _none_if_placeholder(v):
             if v is None:
                 return None
@@ -309,20 +396,79 @@ class GameAnalysisWorkflow:
                     game_name = (g.get("游戏名称") or "").strip()
                     if not game_name:
                         continue
-                    self.video_searcher.db.save_game(
-                        {
-                            "game_name": game_name,
+                    
+                    # 构建游戏信息，包含所有平台的排名（一次性保存）
+                    game_info = {
+                        "game_name": game_name,
+                        "game_company": _none_if_placeholder(g.get("开发公司")),
+                        "rank_change": _none_if_placeholder(g.get("排名变化")),
+                        "monitor_date": _none_if_placeholder(g.get("监控日期")),
+                    }
+                    
+                    # 如果汇总数据中包含各平台的排名，直接使用
+                    if any([g.get("rank_wx"), g.get("rank_dy"), g.get("rank_ios"), g.get("rank_android")]):
+                        # 直接传递各平台的排名到save_game（需要修改save_game支持直接接收这些字段）
+                        # 临时方案：分别保存各平台的排名
+                        # 微信小游戏
+                        if g.get("rank_wx"):
+                            game_info_wx = game_info.copy()
+                            game_info_wx.update({
+                                "game_rank": _none_if_placeholder(g.get("rank_wx")),
+                                "platform": _none_if_placeholder(g.get("platform_wx") or "微信小游戏"),
+                                "source": _none_if_placeholder(g.get("source_wx") or "引力引擎"),
+                                "board_name": _none_if_placeholder(g.get("榜单")),
+                                "rank_wx": _none_if_placeholder(g.get("rank_wx")),  # 直接传递
+                            })
+                            self.video_searcher.db.save_game(game_info_wx)
+                        
+                        # 抖音小游戏
+                        if g.get("rank_dy"):
+                            game_info_dy = game_info.copy()
+                            game_info_dy.update({
+                                "game_rank": _none_if_placeholder(g.get("rank_dy")),
+                                "platform": _none_if_placeholder(g.get("platform_dy") or "抖音小游戏"),
+                                "source": _none_if_placeholder(g.get("source_dy") or "引力引擎"),
+                                "board_name": _none_if_placeholder(g.get("榜单")),
+                                "rank_dy": _none_if_placeholder(g.get("rank_dy")),  # 直接传递
+                            })
+                            self.video_searcher.db.save_game(game_info_dy)
+                        
+                        # iOS（SensorTower）
+                        if g.get("rank_ios"):
+                            game_info_ios = game_info.copy()
+                            game_info_ios.update({
+                                "game_rank": _none_if_placeholder(g.get("rank_ios")),
+                                "platform": _none_if_placeholder(g.get("platform_ios") or "iOS"),
+                                "source": _none_if_placeholder(g.get("source_sensortower") or "SensorTower"),
+                                "board_name": _none_if_placeholder(g.get("榜单") or "iOS Top Charts"),
+                                "rank_ios": _none_if_placeholder(g.get("rank_ios")),  # 直接传递
+                            })
+                            self.video_searcher.db.save_game(game_info_ios)
+                        
+                        # Android（SensorTower）
+                        if g.get("rank_android"):
+                            game_info_android = game_info.copy()
+                            game_info_android.update({
+                                "game_rank": _none_if_placeholder(g.get("rank_android")),
+                                "platform": _none_if_placeholder(g.get("platform_android") or "Android"),
+                                "source": _none_if_placeholder(g.get("source_sensortower") or "SensorTower"),
+                                "board_name": _none_if_placeholder(g.get("榜单") or "Android Top Charts"),
+                                "rank_android": _none_if_placeholder(g.get("rank_android")),  # 直接传递
+                            })
+                            self.video_searcher.db.save_game(game_info_android)
+                    else:
+                        # 如果没有特定平台排名，使用原始数据
+                        game_info.update({
                             "game_rank": _none_if_placeholder(g.get("排名")),
-                            "game_company": _none_if_placeholder(g.get("开发公司")),
-                            "rank_change": _none_if_placeholder(g.get("排名变化")),
                             "platform": _none_if_placeholder(g.get("平台")),
                             "source": _none_if_placeholder(g.get("来源")),
                             "board_name": _none_if_placeholder(g.get("榜单")),
-                            "monitor_date": _none_if_placeholder(g.get("监控日期")),
-                        }
-                    )
-                except Exception:
+                        })
+                        self.video_searcher.db.save_game(game_info)
+                        
+                except Exception as e:
                     # 写库失败不应阻断工作流（后续仍可从CSV读取）
+                    print(f"  警告：保存游戏 {g.get('游戏名称', '未知')} 到数据库失败：{e}")
                     continue
         
         # 保存中间产物
@@ -338,6 +484,165 @@ class GameAnalysisWorkflow:
             print(f"  保存中间产物失败：{str(e)}\n")
         
         return games
+    
+    def _save_rankings_to_weekly_table(self):
+        """
+        将排行榜数据写入weekly_rankings表
+        从CSV文件路径中提取周范围，按平台分组保存
+        """
+        if not getattr(self, "video_searcher", None) or not self.video_searcher.use_database or not self.video_searcher.db:
+            return
+        
+        try:
+            
+            # 获取CSV文件路径
+            extractor = self.rank_extractor
+            csv_path = Path(extractor.csv_path or config.RANKINGS_CSV_PATH)
+            
+            # 确定基础目录和周范围
+            week_range = None
+            base_dir = None
+            
+            # 如果指定的是文件，从文件路径提取周范围
+            if csv_path.exists() and csv_path.is_file():
+                # 从文件路径中提取周范围（例如：data/人气榜/2026-1-19~2026-1-25/wx_anomalies.csv）
+                parent_dir = csv_path.parent
+                if parent_dir.name and '~' in parent_dir.name:
+                    week_range = parent_dir.name
+                    base_dir = parent_dir  # 使用文件所在的目录作为基础目录
+                else:
+                    # 无法提取周范围，跳过
+                    return
+            else:
+                # 如果是目录（人气榜），定位到「周范围」目录（支持 人气榜/周范围/ 或 人气榜/日期/周范围/）
+                if not csv_path.exists() or not csv_path.is_dir():
+                    csv_path = Path("data") / "人气榜"
+                if not csv_path.exists() or not csv_path.is_dir():
+                    return
+                base_dir = csv_path
+                week_range = None
+                # 收集名含 ~ 的周范围目录（直接子目录或 人气榜/日期/ 下再一层）
+                week_dirs = []
+                for d in base_dir.iterdir():
+                    if not d.is_dir() or not d.name:
+                        continue
+                    if "~" in d.name:
+                        week_dirs.append(d)
+                    else:
+                        for d2 in d.iterdir():
+                            if d2.is_dir() and d2.name and "~" in d2.name:
+                                week_dirs.append(d2)
+                if week_dirs:
+                    week_dirs.sort(key=lambda x: x.name, reverse=True)
+                    week_range = week_dirs[0].name
+                    base_dir = week_dirs[0]  # 只在该周目录下找 CSV
+                if not week_range:
+                    all_csv_files = list(base_dir.rglob("*.csv"))
+                    if not all_csv_files:
+                        return
+                    first_file = all_csv_files[0]
+                    parent_dir = first_file.parent
+                    if parent_dir.name and "~" in parent_dir.name:
+                        week_range = parent_dir.name
+                        base_dir = parent_dir
+                    elif parent_dir.parent and parent_dir.parent.name and "~" in parent_dir.parent.name:
+                        week_range = parent_dir.parent.name
+                        base_dir = parent_dir.parent
+                    else:
+                        return
+            
+            # 解析周范围，提取week_start和week_end
+            week_start = None
+            week_end = None
+            if week_range:
+                parts = week_range.split('~')
+                if len(parts) == 2:
+                    try:
+                        # 解析日期：2026-1-19 -> 2026-01-19
+                        start_parts = parts[0].split('-')
+                        end_parts = parts[1].split('-')
+                        if len(start_parts) == 3 and len(end_parts) == 3:
+                            week_start = f"{start_parts[0]}-{start_parts[1].zfill(2)}-{start_parts[2].zfill(2)}"
+                            week_end = f"{end_parts[0]}-{end_parts[1].zfill(2)}-{end_parts[2].zfill(2)}"
+                    except:
+                        pass
+            
+            # 仅处理 dy/wx 的 CSV 文件
+            all_csv_files = list(base_dir.rglob("*.csv"))
+            wx_files = [f for f in all_csv_files if f.name == "wx_anomalies.csv" or f.name.startswith("wx_")]
+            dy_files = [f for f in all_csv_files if f.name == "dy_anomalies.csv" or f.name.startswith("dy_")]
+            wx_file = next((f for f in all_csv_files if f.name == "wx_anomalies.csv"), None) or (max(wx_files, key=lambda x: x.stat().st_mtime) if wx_files else None)
+            dy_file = next((f for f in all_csv_files if f.name == "dy_anomalies.csv"), None) or (max(dy_files, key=lambda x: x.stat().st_mtime) if dy_files else None)
+            
+            weekly_records = []
+            
+            # 处理微信小游戏
+            if wx_file:
+                try:
+                    games = extractor._read_csv_file(wx_file, limit=None)
+                    if games:
+                        # 获取平台信息
+                        platform = games[0].get("平台", "微信小游戏") if games else "微信小游戏"
+                        source = games[0].get("来源", "引力引擎") if games else "引力引擎"
+                        board_name = games[0].get("榜单", "微信小游戏人气周榜") if games else "微信小游戏人气周榜"
+                        region = games[0].get("地区", "中国") if games else "中国"
+                        
+                        weekly_records.append({
+                            "week_range": week_range,
+                            "week_start": week_start,
+                            "week_end": week_end,
+                            "platform": "wx",
+                            "source": source,
+                            "board_name": board_name,
+                            "region": region,
+                            "ranking": json.dumps(games, ensure_ascii=False)
+                        })
+                except Exception as e:
+                    print(f"  警告：读取微信小游戏榜单失败：{e}")
+            
+            # 处理抖音小游戏
+            if dy_file:
+                try:
+                    games = extractor._read_csv_file(dy_file, limit=None)
+                    if games:
+                        platform = games[0].get("平台", "抖音小游戏") if games else "抖音小游戏"
+                        source = games[0].get("来源", "引力引擎") if games else "引力引擎"
+                        board_name = games[0].get("榜单", "抖音小游戏周榜") if games else "抖音小游戏周榜"
+                        region = games[0].get("地区", "中国") if games else "中国"
+                        
+                        weekly_records.append({
+                            "week_range": week_range,
+                            "week_start": week_start,
+                            "week_end": week_end,
+                            "platform": "dy",
+                            "source": source,
+                            "board_name": board_name,
+                            "region": region,
+                            "ranking": json.dumps(games, ensure_ascii=False)
+                        })
+                except Exception as e:
+                    print(f"  警告：读取抖音小游戏榜单失败：{e}")
+            
+            # 保存到weekly_rankings表（仅 dy/wx）
+            if weekly_records:
+                # 先删除该周范围的所有记录（避免重复）
+                try:
+                    conn = sqlite3.connect(self.video_searcher.db.db_path)
+                    cursor = conn.cursor()
+                    cursor.execute('DELETE FROM weekly_rankings WHERE week_range = ?', (week_range,))
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    print(f"  警告：清理旧数据失败：{e}")
+                
+                # 插入新记录
+                inserted = self.video_searcher.db.insert_weekly_rankings(weekly_records)
+                if inserted > 0:
+                    print(f"  ✓ 已保存 {inserted} 个平台的排行榜到weekly_rankings表（周范围：{week_range}）")
+        except Exception as e:
+            print(f"  警告：保存排行榜到weekly_rankings表失败：{e}")
+            import traceback
+            traceback.print_exc()
     
     def step2_search_videos(self, games: List[Dict]) -> List[Dict]:
         """
@@ -410,17 +715,35 @@ class GameAnalysisWorkflow:
                         video_url = gdrive_url
                         print(f"  ✓ 从数据库找到Google Drive URL：{video_url[:50]}...")
             
+            # 根据来源选择搜索器：SensorTower 使用 YouTube，其他使用抖音
+            source = csv_game.get("来源", "").strip()
+            
             # 如果数据库中没有，进行搜索和下载
             if not video_path or not video_url:
                 if not video_path:
                     print(f"  数据库中未找到已下载的视频，开始搜索...")
-                    video_path = self.video_searcher.search_and_download(
-                        game_name=game_name,
-                        game_type=game_type  # 使用保存的原始游戏类型
-                    )
+                    if source == "SensorTower":
+                        print(f"  使用 YouTube 搜索（来源：SensorTower）")
+                        video_result = self.youtube_searcher.search_and_download(
+                            game_name=game_name,
+                            max_results=1,
+                            upload_to_gdrive=True
+                        )
+                        if video_result:
+                            video_path = video_result.get("local_path")
+                            video_url = video_result.get("gdrive_url")
+                            video_info = video_result
+                            # 更新 video_id 为 YouTube video_id
+                            aweme_id = video_result.get("video_id")
+                    else:
+                        print(f"  使用抖音搜索（来源：{source or '引力引擎'}）")
+                        video_path = self.video_searcher.search_and_download(
+                            game_name=game_name,
+                            game_type=game_type  # 使用保存的原始游戏类型
+                        )
                 
-                # 重新从数据库获取最新信息
-                if self.video_searcher.use_database and self.video_searcher.db:
+                # 重新从数据库获取最新信息（仅对抖音搜索）
+                if source != "SensorTower" and self.video_searcher.use_database and self.video_searcher.db:
                     db_game = self.video_searcher.db.get_game(game_name)
                     videos = [db_game] if db_game else []
                     if videos:
@@ -440,6 +763,16 @@ class GameAnalysisWorkflow:
                                 if gdrive_url:
                                     video_url = gdrive_url
                                     print(f"  ✓ 已上传并获取Google Drive URL：{video_url[:50]}...")
+                
+                # 对于 YouTube 搜索，如果还没有 video_url，尝试上传
+                if source == "SensorTower" and video_path and not video_url and os.path.exists(video_path):
+                    print(f"  尝试上传本地视频到Google Drive...")
+                    gdrive_url = self.youtube_searcher.upload_to_gdrive(video_path, game_name)
+                    if gdrive_url:
+                        video_url = gdrive_url
+                        if video_info:
+                            video_info['gdrive_url'] = gdrive_url
+                        print(f"  ✓ 已上传并获取Google Drive URL：{video_url[:50]}...")
             
             # 获取完整的游戏信息（优先使用原始CSV数据，补充数据库中的视频信息）
             if video_info:
@@ -447,14 +780,18 @@ class GameAnalysisWorkflow:
                 game_info = csv_game.copy() if isinstance(csv_game, dict) else {}
                 # 如果数据库中有视频信息，合并进去
                 if video_info:
+                    # 对于 YouTube，使用 video_id；对于抖音，使用 aweme_id
+                    video_id_key = "video_id" if source == "SensorTower" else "aweme_id"
                     game_info.update({
-                        "aweme_id": video_info.get("aweme_id"),
-                        "gdrive_url": video_info.get("gdrive_url"),
-                        "local_path": video_info.get("local_path"),
+                        "aweme_id": video_info.get(video_id_key) or video_info.get("aweme_id"),
+                        "video_id": video_info.get("video_id"),  # YouTube video_id
+                        "gdrive_url": video_info.get("gdrive_url") or video_url,
+                        "local_path": video_info.get("local_path") or video_path,
                         # 透传抖音原始分享链接（用于报告“点击查看”跳回抖音）
                         "share_url": video_info.get("share_url"),
+                        "youtube_url": video_info.get("youtube_url"),  # YouTube URL
                         "original_video_url": video_info.get("original_video_url"),
-                        "video_url": video_info.get("video_url"),
+                        "video_url": video_info.get("video_url") or video_url,
                     })
                 
                 video_results.append({
@@ -548,6 +885,9 @@ class GameAnalysisWorkflow:
                 analysis["game_rank"] = game_info.get("排名", "")
                 analysis["game_company"] = game_info.get("开发公司", "")
                 analysis["rank_change"] = game_info.get("排名变化", "--")
+                # 排名变化类型（新进榜/飙升），供周报与 weekly 简单表使用
+                analysis["change_type"] = analysis.get("change_type", "")
+                analysis["is_new_entry"] = analysis.get("is_new_entry", False)
                 # 额外补充：监控日期/平台/来源/榜单（来自排行榜CSV）
                 analysis["monitor_date"] = game_info.get("监控日期", "")
                 analysis["platform"] = game_info.get("平台", "")
@@ -583,7 +923,7 @@ class GameAnalysisWorkflow:
     
     def step4_generate_report(self, analyses: List[Dict]) -> str:
         """
-        步骤4：生成日报
+        步骤4：生成日报（每个游戏一份，格式与之前一致）；并将新进榜/飙升游戏写入 weekly_report_simple 表（简单内容），玩法仍存 games 表。
         
         Args:
             analyses: 分析结果列表
@@ -593,6 +933,9 @@ class GameAnalysisWorkflow:
         """
         print("【步骤4】生成日报...")
         report_json = self.report_generator.generate_daily_report(analyses)
+        
+        # 将新进榜、飙升游戏写入 weekly_report_simple（只存简单内容）
+        self._save_weekly_report_simple(analyses)
         
         # 保存中间产物
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -608,40 +951,578 @@ class GameAnalysisWorkflow:
             print(f"  保存中间产物失败：{str(e)}\n")
         
         return report_json
-    
+
+    def _save_weekly_report_simple(self, analyses: List[Dict]) -> None:
+        """
+        将新进榜、飙升游戏的简单内容写入 weekly_report_simple 表；玩法仍存放在 games.gameplay_analysis。
+        """
+        if not getattr(self, "video_searcher", None) or not self.video_searcher.use_database or not self.video_searcher.db:
+            return
+        week_range = self._get_current_week_range()
+        if not week_range:
+            return
+        db = self.video_searcher.db
+        week_range = db.normalize_week_range(week_range)
+        records = []
+        for a in analyses:
+            change_type = (a.get("change_type") or "").strip()
+            if change_type not in ("新进榜", "飙升"):
+                continue
+            ad = a.get("analysis_data") or {}
+            if isinstance(ad, dict):
+                summary = (ad.get("core_gameplay") or "")[:200]
+            else:
+                summary = ""
+            platform_raw = (a.get("platform") or "").strip()
+            platform = "wx" if "微信" in platform_raw else "dy"
+            records.append({
+                "week_range": week_range,
+                "platform": platform,
+                "game_name": (a.get("game_name") or "").strip(),
+                "change_type": change_type,
+                "rank": a.get("game_rank"),
+                "rank_change": a.get("rank_change"),
+                "summary": (summary or change_type).strip(),
+            })
+        if not records:
+            return
+        try:
+            db.delete_weekly_report_simple_by_week(week_range)
+            inserted = db.insert_weekly_report_simple(records)
+            if inserted > 0:
+                print(f"  ✓ 已保存 {inserted} 条周报简单内容到 weekly_report_simple（新进榜+飙升）")
+        except Exception as e:
+            print(f"  警告：保存 weekly_report_simple 失败：{e}")
+
+    def _get_current_week_range(self) -> Optional[str]:
+        """从排行榜 CSV 路径推断当前周范围（如 2026-1-19~2026-1-25）。支持 人气榜/周范围/ 或 人气榜/日期/周范围/。"""
+        try:
+            extractor = self.rank_extractor
+            csv_path = Path(extractor.csv_path or config.RANKINGS_CSV_PATH)
+            if csv_path.exists() and csv_path.is_file():
+                parent = csv_path.parent
+                if parent.name and "~" in parent.name:
+                    return parent.name
+                # 文件可能在 人气榜/日期/周范围/ 下，再往上一级
+                if parent.parent and parent.parent.name and "~" in parent.parent.name:
+                    return parent.parent.name
+                return None
+            if csv_path.exists() and csv_path.is_dir():
+                base_dir = csv_path
+            else:
+                base_dir = Path("data") / "人气榜"
+            if not base_dir.exists() or not base_dir.is_dir():
+                return None
+            # 收集所有「周范围」目录（名含 ~）：人气榜 下直接一层，或 人气榜/日期/ 下再一层
+            week_dirs = []
+            for d in base_dir.iterdir():
+                if not d.is_dir() or not d.name:
+                    continue
+                if "~" in d.name:
+                    week_dirs.append(d)
+                else:
+                    for d2 in d.iterdir():
+                        if d2.is_dir() and d2.name and "~" in d2.name:
+                            week_dirs.append(d2)
+            if week_dirs:
+                week_dirs.sort(key=lambda x: x.name, reverse=True)
+                return week_dirs[0].name
+            # 兜底：任意 CSV 的父目录（或祖父目录）名含 ~
+            all_csv = list(base_dir.rglob("*.csv"))
+            seen = set()
+            for f in all_csv:
+                parent = f.parent
+                if parent != base_dir and parent.name and "~" in parent.name and parent.name not in seen:
+                    seen.add(parent.name)
+                    return parent.name
+                if parent.parent and parent.parent != base_dir and parent.parent.name and "~" in parent.parent.name and parent.parent.name not in seen:
+                    seen.add(parent.parent.name)
+                    return parent.parent.name
+            return None
+        except Exception:
+            return None
+
     def step5_send_report(self, analyses: List[Dict]) -> bool:
         """
-        步骤5：发送日报到飞书
-        
-        Args:
-            analyses: 分析结果列表
-        
-        Returns:
-            是否发送成功
+        步骤5：不发送飞书；将每个游戏的玩法单独写一个 md，将 simple report 写一个 md（用监控日期命名），
+        并将微信/抖音游戏排行榜写入一个 CSV。
         """
-        print("【步骤5】发送日报到飞书...")
-        feishu_report = self.report_generator.generate_feishu_format(analyses)
+        import csv
+        import re
         
-        # 保存发送前的卡片数据
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_file = f"data/step5_feishu_card_{timestamp}.json"
+        print("【步骤5】输出 Markdown 与排行榜 CSV（不发送飞书）...")
+        if not analyses:
+            print("  无分析结果，跳过。\n")
+            return False
+        
+        # 监控日期：取第一条分析的 monitor_date，或周范围结束日
+        monitor_date = (analyses[0].get("monitor_date") or "").strip()
+        if not monitor_date:
+            week_range = self._get_current_week_range()
+            if week_range and "~" in week_range:
+                parts = week_range.split("~")
+                if len(parts) == 2:
+                    end_part = parts[1].strip()
+                    segs = end_part.split("-")
+                    if len(segs) == 3:
+                        monitor_date = f"{segs[0]}-{segs[1].zfill(2)}-{segs[2].zfill(2)}"
+            if not monitor_date:
+                monitor_date = datetime.now().strftime("%Y-%m-%d")
+        
+        out_dir = Path("data") / "reports"
+        os.makedirs(out_dir, exist_ok=True)
+        
+        # 1. 每个游戏单独一个 md
+        def _sanitize_filename(name: str) -> str:
+            return re.sub(r'[<>:"/\\|?*]', "_", (name or "").strip()) or "未命名"
+        
+        for a in analyses:
+            game_name = a.get("game_name", "未知游戏")
+            ad = a.get("analysis_data") or {}
+            if isinstance(ad, dict):
+                core = ad.get("core_gameplay", "")
+                baseline = ad.get("baseline_game", "")
+                innovations = ad.get("innovation_points", [])
+                if isinstance(innovations, list):
+                    innovation_text = "\n".join(f"- {x}" for x in innovations if x)
+                else:
+                    innovation_text = str(innovations)
+            else:
+                core = a.get("analysis", "") or ""
+                baseline = ""
+                innovation_text = ""
+            rank = a.get("game_rank", "")
+            rank_change = a.get("rank_change", "")
+            platform = a.get("platform", "")
+            change_type = a.get("change_type", "")
+            body = f"""# {game_name}
+
+- **排名**：{rank}
+- **排名变化**：{rank_change}
+- **平台**：{platform}
+- **类型**：{change_type or "—"}
+
+## 核心玩法
+
+{core}
+
+## 基线游戏
+
+{baseline}
+
+## 创新点
+
+{innovation_text}
+"""
+            fname = _sanitize_filename(game_name) + ".md"
+            filepath = out_dir / fname
+            try:
+                with open(filepath, "w", encoding="utf-8") as f:
+                    f.write(body)
+                print(f"  ✓ {fname}")
+            except Exception as e:
+                print(f"  ✗ 写入 {fname} 失败：{e}")
+        
+        # 2. Simple report 一个 md（用监控日期命名）
+        simple_lines = ["# 周报简要（新进榜 + 飙升）", "", f"**监控日期**：{monitor_date}", ""]
+        for a in analyses:
+            ct = (a.get("change_type") or "").strip()
+            if ct not in ("新进榜", "飙升"):
+                continue
+            name = a.get("game_name", "")
+            rank = a.get("game_rank", "")
+            rank_change = a.get("rank_change", "")
+            platform = a.get("platform", "")
+            ad = a.get("analysis_data") or {}
+            summary = (ad.get("core_gameplay", "")[:200] if isinstance(ad, dict) else "") or ct
+            simple_lines.append(f"## {name}（{platform}）")
+            simple_lines.append(f"- 类型：{ct} | 排名：{rank} | 排名变化：{rank_change}")
+            simple_lines.append(f"- {summary}")
+            simple_lines.append("")
+        simple_md_path = out_dir / f"{monitor_date}.md"
         try:
-            os.makedirs("data", exist_ok=True)
-            import json
-            with open(output_file, 'w', encoding='utf-8') as f:
-                json.dump(feishu_report, f, ensure_ascii=False, indent=2)
-            print(f"  飞书卡片数据已保存到：{output_file}")
+            with open(simple_md_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(simple_lines))
+            print(f"  ✓ Simple 周报：{simple_md_path.name}")
         except Exception as e:
-            print(f"  保存飞书卡片数据失败：{str(e)}")
+            print(f"  ✗ 写入 simple 周报失败：{e}")
         
-        success = self.feishu_sender.send_card(feishu_report)
-        
-        if success:
-            print("✓ 日报发送成功\n")
+        # 3. 微信 + 抖音排行榜写入一个 CSV
+        week_range = self._get_current_week_range()
+        if getattr(self, "video_searcher", None) and self.video_searcher.use_database and self.video_searcher.db:
+            db = self.video_searcher.db
+            if week_range:
+                week_range = db.normalize_week_range(week_range)
+            try:
+                conn = sqlite3.connect(db.db_path)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT platform, ranking FROM weekly_rankings WHERE week_range = ? AND platform IN ('wx', 'dy') ORDER BY platform",
+                    (week_range,),
+                )
+                rows = cursor.fetchall()
+                conn.close()
+            except Exception as e:
+                rows = []
+                print(f"  警告：读取 weekly_rankings 失败：{e}")
         else:
-            print("✗ 日报发送失败（请检查飞书Webhook配置）\n")
+            rows = []
         
-        return success
+        csv_path = out_dir / f"rankings_{monitor_date}.csv"
+        if rows:
+            platform_name_map = {"wx": "微信小游戏", "dy": "抖音小游戏"}
+            all_csv_rows = []
+            for r in rows:
+                platform_key = (r["platform"] or "").strip()
+                platform_label = platform_name_map.get(platform_key, platform_key or "未知")
+                try:
+                    raw = r["ranking"]
+                    data = json.loads(raw) if isinstance(raw, str) else raw
+                except Exception:
+                    continue
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict):
+                            row = dict(item)
+                            row["平台"] = platform_label
+                            all_csv_rows.append(row)
+                elif isinstance(data, dict):
+                    list_data = data.get("rows") or data.get("games") or []
+                    header = data.get("header") or []
+                    for item in list_data:
+                        if isinstance(item, dict):
+                            row = dict(item)
+                            row["平台"] = platform_label
+                            all_csv_rows.append(row)
+            if all_csv_rows:
+                all_keys = ["平台"]
+                for row in all_csv_rows:
+                    for k in row:
+                        if k not in all_keys:
+                            all_keys.append(k)
+                try:
+                    with open(csv_path, "w", encoding="utf-8-sig", newline="") as f:
+                        w = csv.DictWriter(f, fieldnames=all_keys, extrasaction="ignore")
+                        w.writeheader()
+                        w.writerows(all_csv_rows)
+                    print(f"  ✓ 排行榜 CSV：{csv_path.name}")
+                except Exception as e:
+                    print(f"  ✗ 写入排行榜 CSV 失败：{e}")
+            else:
+                print("  未解析到排行榜数据，跳过 CSV。")
+        else:
+            print("  无 weekly_rankings 数据，跳过排行榜 CSV。")
+        
+        print("✓ 步骤5 完成\n")
+        return True
+    
+    def _send_to_feishu(self, feishu_report: Dict) -> bool:
+        """发送到飞书"""
+        if not feishu_report:
+            return False
+        return self.feishu_sender.send_card(feishu_report)
+    
+    def _send_to_wecom(self, feishu_report: Dict) -> bool:
+        """发送到企业微信（使用send_step5_to_wecom.py的逻辑）"""
+        if not feishu_report:
+            return False
+        
+        try:
+            # 导入send_step5_to_wecom中的函数
+            # 由于send_step5_to_wecom.py使用了from __future__ import annotations，需要使用动态导入
+            import sys
+            from pathlib import Path
+            import importlib.util
+            
+            # 获取项目根目录
+            project_root = Path(__file__).parent
+            wecom_module_path = project_root / "scripts" / "senders" / "send_step5_to_wecom.py"
+            
+            # 确保项目根目录在sys.path中
+            if str(project_root) not in sys.path:
+                sys.path.insert(0, str(project_root))
+            
+            # 动态导入模块（避免__future__导入问题）
+            spec = importlib.util.spec_from_file_location("send_step5_to_wecom", str(wecom_module_path))
+            wecom_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(wecom_module)
+            
+            # 提取需要的函数和类
+            chunk_text = wecom_module.chunk_text
+            extract_sections_from_step5 = wecom_module.extract_sections_from_step5
+            get_feishu_tenant_access_token = wecom_module.get_feishu_tenant_access_token
+            download_feishu_image_bytes = wecom_module.download_feishu_image_bytes
+            
+            from modules.wecom_sender import WeComSender
+            import config
+            
+            # 获取企业微信webhook URL
+            wecom_webhook = config.WECOM_WEBHOOK_URL or ""
+            if not wecom_webhook:
+                print("  警告：未配置企业微信Webhook URL (WECOM_WEBHOOK_URL)")
+                return False
+            
+            # 创建发送器（使用与send_step5_to_wecom相同的配置）
+            sender = WeComSender(
+                wecom_webhook,
+                min_interval_seconds=3.2,
+                max_retries=3,
+                retry_base_seconds=15.0,
+            )
+            
+            # 使用send_step5_to_wecom的逻辑提取内容
+            header_text, games = extract_sections_from_step5(feishu_report)
+            
+            # 发送头部信息
+            if header_text:
+                header_chunks = chunk_text(header_text, max_len=3800)
+                for chunk in header_chunks:
+                    sender.send_markdown(chunk)
+            
+            # 准备飞书token（用于下载图片）
+            app_id = config.FEISHU_APP_ID or ""
+            app_secret = config.FEISHU_APP_SECRET or ""
+            token = None
+            if app_id and app_secret:
+                try:
+                    token = get_feishu_tenant_access_token(app_id, app_secret)
+                except Exception as e:
+                    print(f"  警告：获取飞书token失败，将跳过图片发送：{e}")
+            
+            # 逐游戏发送：文字(分段) -> 中间截图(单独 image)
+            failed_images = []
+            for g in games:
+                text = g.merged_text()
+                text_chunks = chunk_text(text, max_len=3800)
+                
+                # 发送文字内容
+                for chunk in text_chunks:
+                    sender.send_markdown(chunk)
+                
+                # 发送中间截图（如果存在）
+                if g.middle_img_key and token:
+                    try:
+                        img_bytes = download_feishu_image_bytes(g.middle_img_key, token)
+                        sender.send_image_bytes(img_bytes)
+                    except Exception as e:
+                        failed_images.append((g.index, g.name, g.middle_img_key))
+                        print(f"  [!] 游戏{g.index}《{g.name}》中间截图发送失败：{e}")
+                        # 频控场景下给一点缓冲
+                        time.sleep(5)
+            
+            if failed_images:
+                print("  [!] 以下游戏的中间截图未发送成功：")
+                for idx, name, key in failed_images:
+                    print(f"    - 游戏{idx}《{name}》 img_key={key}")
+            
+            return True
+            
+        except ImportError as e:
+            print(f"  错误：无法导入必要的模块：{e}")
+            import traceback
+            traceback.print_exc()
+            return False
+        except Exception as e:
+            print(f"  发送到企业微信时出错：{str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    
+    def _send_to_sheets(self, analyses: List[Dict]) -> bool:
+        """发送到Google Sheets"""
+        try:
+            import config
+            
+            # 检查配置
+            if not config.GOOGLE_SHEET_ID:
+                print("  警告：未配置Google Sheet ID (GOOGLE_SHEET_ID)")
+                return False
+            if not config.GOOGLE_SHEETS_CREDENTIALS:
+                print("  警告：未配置Google Sheets凭证 (GOOGLE_SHEETS_CREDENTIALS)")
+                return False
+            
+            # 尝试导入Google Sheets相关库
+            try:
+                from google.oauth2.credentials import Credentials
+                from google.oauth2 import service_account
+                from google_auth_oauthlib.flow import InstalledAppFlow
+                from google.auth.transport.requests import Request
+                from googleapiclient.discovery import build
+            except ImportError:
+                print("  错误：未安装Google Sheets API库")
+                print("  请运行: pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib")
+                return False
+            
+            # 准备数据行
+            rows = []
+            # 表头
+            headers = ["排名", "游戏名称", "核心玩法", "吸引力", "创新点", "视频链接", "监控日期"]
+            rows.append(headers)
+            
+            # 数据行
+            for analysis in analyses:
+                game_name = analysis.get("game_name", "")
+                game_rank = analysis.get("game_rank", "")
+                monitor_date = analysis.get("monitor_date", "")
+                
+                # 提取核心玩法
+                analysis_data = analysis.get("analysis_data", {})
+                if isinstance(analysis_data, dict):
+                    core_gameplay = analysis_data.get("core_gameplay", {}).get("description", "")
+                    attraction = analysis_data.get("attraction", {}).get("description", "")
+                    innovation = analysis_data.get("innovation", {}).get("description", "")
+                else:
+                    # 从文本中提取
+                    analysis_text = analysis.get("analysis", "")
+                    core_gameplay = self._extract_field(analysis_text, "核心玩法")
+                    attraction = self._extract_field(analysis_text, "吸引力")
+                    innovation = self._extract_field(analysis_text, "创新点")
+                
+                # 视频链接
+                video_url = analysis.get("gdrive_url", "") or analysis.get("share_url", "")
+                
+                row = [
+                    str(game_rank),
+                    game_name,
+                    core_gameplay[:500],  # 限制长度
+                    attraction[:500],
+                    innovation[:500],
+                    video_url,
+                    monitor_date
+                ]
+                rows.append(row)
+            
+            # 写入Google Sheets
+            spreadsheet_id = config.GOOGLE_SHEET_ID
+            # 从URL中提取ID（如果提供了完整URL）
+            if "/" in spreadsheet_id:
+                spreadsheet_id = spreadsheet_id.split("/")[-1]
+            
+            # 获取凭证
+            creds = self._get_google_sheets_credentials()
+            if not creds:
+                return False
+            
+            service = build("sheets", "v4", credentials=creds)
+            sheet_name = "游戏分析日报"
+            
+            # 创建或获取工作表
+            self._get_or_create_sheet(service, spreadsheet_id, sheet_name)
+            
+            # 写入数据
+            range_name = f"{sheet_name}!A1"
+            body = {'values': rows}
+            result = service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=range_name,
+                valueInputOption='USER_ENTERED',
+                body=body
+            ).execute()
+            
+            updated_cells = result.get('updatedCells', 0)
+            print(f"  ✓ 已写入 {updated_cells} 个单元格到工作表：{sheet_name}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"  写入Google Sheets时出错：{str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def _extract_field(self, text: str, field_name: str) -> str:
+        """从文本中提取指定字段"""
+        import re
+        if not text:
+            return ""
+        patterns = [
+            rf"{field_name}[：:]\s*(.+?)(?=\n\n|\n\*\*|$)",
+            rf"{field_name}[：:]\s*(.+?)(?=\n|$)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+        return ""
+    
+    def _get_google_sheets_credentials(self):
+        """获取Google Sheets凭证"""
+        import config
+        import json
+        import os
+        from pathlib import Path
+        
+        credentials_file = config.GOOGLE_SHEETS_CREDENTIALS
+        if not credentials_file or not os.path.exists(credentials_file):
+            print(f"  错误：凭证文件不存在：{credentials_file}")
+            return None
+        
+        # 检测是否为服务账号
+        try:
+            with open(credentials_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                is_service_account = data.get('type') == 'service_account'
+        except Exception:
+            is_service_account = False
+        
+        SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+        
+        if is_service_account:
+            # 服务账号
+            from google.oauth2 import service_account
+            return service_account.Credentials.from_service_account_file(
+                credentials_file, scopes=SCOPES
+            )
+        else:
+            # OAuth2
+            from google.oauth2.credentials import Credentials
+            from google_auth_oauthlib.flow import InstalledAppFlow
+            from google.auth.transport.requests import Request
+            
+            creds = None
+            token_file = config.GOOGLE_SHEETS_TOKEN or str(Path(credentials_file).parent / "token_sheets.json")
+            
+            if os.path.exists(token_file):
+                creds = Credentials.from_authorized_user_file(token_file, SCOPES)
+            
+            if not creds or not creds.valid:
+                if creds and creds.expired and creds.refresh_token:
+                    creds.refresh(Request())
+                else:
+                    flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
+                    creds = flow.run_local_server(port=0)
+                
+                with open(token_file, 'w') as token:
+                    token.write(creds.to_json())
+            
+            return creds
+    
+    def _get_or_create_sheet(self, service, spreadsheet_id: str, sheet_name: str):
+        """获取或创建工作表"""
+        try:
+            spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+            sheet_names = [sheet['properties']['title'] for sheet in spreadsheet.get('sheets', [])]
+            
+            if sheet_name not in sheet_names:
+                # 创建工作表
+                request_body = {
+                    'requests': [{
+                        'addSheet': {
+                            'properties': {
+                                'title': sheet_name
+                            }
+                        }
+                    }]
+                }
+                service.spreadsheets().batchUpdate(
+                    spreadsheetId=spreadsheet_id,
+                    body=request_body
+                ).execute()
+                print(f"  ✓ 已创建工作表：{sheet_name}")
+        except Exception as e:
+            print(f"  获取/创建工作表时出错：{str(e)}")
     
     def run(self, max_games: int = None, skip_scrape: bool = False, steps: List[int] = None):
         """
@@ -711,7 +1592,7 @@ class GameAnalysisWorkflow:
                     return
             self.step4_generate_report(analyses)
         
-        # 步骤5：发送日报
+        # 步骤5：输出 md（每游戏一 md、simple 一 md）与排行榜 CSV，不发送飞书
         if 5 in steps:
             if analyses is None:
                 # 尝试从中间产物加载
@@ -945,13 +1826,15 @@ def main():
   2 - 搜索并下载视频
   3 - 分析视频
   4 - 生成日报
-  5 - 发送日报到飞书
+  5 - 输出每游戏玩法 md、simple 周报 md（监控日期命名）、微信+抖音排行榜 CSV（不发送飞书）
 
 示例：
   python main.py                    # 执行所有步骤
+  python main.py --platform dy      # 选择抖音小游戏榜单
+  python main.py --platform wx      # 选择微信小游戏榜单
   python main.py --steps 0,1        # 只执行步骤0和1
   python main.py --steps 2,3        # 只执行步骤2和3
-  python main.py --step 1           # 只执行步骤1
+  python main.py --step 5           # 只执行步骤5（输出 md 与 CSV）
         """
     )
     parser.add_argument('max_games', type=int, nargs='?', default=None,
@@ -965,22 +1848,59 @@ def main():
     parser.add_argument('--step', type=int,
                         help='只执行单个步骤（0-5）')
     parser.add_argument('--rankings-csv', type=str, default="",
-                        help='指定输入排行榜CSV文件路径（或目录）；用于切换到周榜/月榜CSV。优先级最高。')
+                        help='指定人气榜目录或单文件。目录下应包含：dy_anomalies.csv、wx_anomalies.csv、sensortower_rankings.csv。优先级最高。')
     parser.add_argument('--use-latest-weekly', action='store_true',
                         help='自动选择 data/人气榜 下最新的“周榜CSV”（文件名包含 ~），不指定 --rankings-csv 时生效。')
     parser.add_argument('--force-refresh-analysis', action='store_true',
                         help='强制重新分析：忽略数据库中已有的玩法分析缓存（使用最新提示词重新生成并覆盖）')
     parser.add_argument('--skip-screenshots', action='store_true',
                         help='跳过截图提取/上传（当前提示词/报告不依赖截图时推荐开启）')
+    parser.add_argument('--platform', type=str, choices=['dy', 'wx'], default=None,
+                        help='选择平台：dy=抖音小游戏，wx=微信小游戏。默认不限制，选择最新的CSV文件')
+    parser.add_argument('--send-to', type=str, choices=['feishu', 'wecom', 'sheets', 'all'], default='feishu',
+                        help='选择发送目标：feishu=飞书，wecom=企业微信，sheets=Google Sheets，all=全部。默认为feishu')
     
-    args = parser.parse_args()
+    # 解析参数前，检查常见的拼写错误
+    if len(sys.argv) > 1:
+        for arg in sys.argv[1:]:
+            # 检查是否是拼写错误的 --platform（常见错误：--platfrom）
+            if arg.startswith('--platfor') and arg != '--platform':
+                print(f"错误：参数 '{arg}' 不存在。")
+                print(f"提示：您是否想使用 '--platform'？")
+                print(f"      正确的用法：python main.py --platform dy")
+                print(f"                  或：python main.py --platform wx")
+                sys.exit(1)
+    
+    # 使用 parse_known_args 来更好地处理未知参数
+    args, unknown = parser.parse_known_args()
+    
+    # 检查是否有未知参数
+    if unknown:
+        for arg in unknown:
+            if arg.startswith('--'):
+                # 检查是否是拼写错误
+                if 'platfor' in arg.lower() and arg != '--platform':
+                    print(f"错误：参数 '{arg}' 不存在。")
+                    print(f"提示：您是否想使用 '--platform'？")
+                    print(f"      正确的用法：python main.py --platform dy")
+                    print(f"                  或：python main.py --platform wx")
+                else:
+                    print(f"错误：未知参数 '{arg}'")
+                    print(f"      使用 python main.py --help 查看所有可用参数")
+                sys.exit(1)
+        # 如果有其他未知参数（非 -- 开头），可能是位置参数的问题
+        if any(not arg.startswith('--') for arg in unknown):
+            print(f"错误：无法识别的参数：{unknown}")
+            print(f"      使用 python main.py --help 查看所有可用参数")
+            sys.exit(1)
     
     rankings_csv_path = (args.rankings_csv or "").strip() or None
     if rankings_csv_path is None and args.use_latest_weekly:
         try:
             base_dir = Path("data") / "人气榜"
             if base_dir.exists() and base_dir.is_dir():
-                weekly_files = list(base_dir.glob("*~*.csv"))
+                # 递归查找所有子目录中包含 ~ 的CSV文件（周榜文件）
+                weekly_files = list(base_dir.rglob("*~*.csv"))
                 if weekly_files:
                     weekly_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
                     rankings_csv_path = str(weekly_files[0])
@@ -991,6 +1911,8 @@ def main():
         rankings_csv_path=rankings_csv_path,
         force_refresh_analysis=bool(args.force_refresh_analysis),
         skip_screenshots=bool(args.skip_screenshots),
+        platform=args.platform,
+        send_to=args.send_to,
     )
     
     # 如果只爬取

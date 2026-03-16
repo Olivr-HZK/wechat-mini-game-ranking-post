@@ -32,8 +32,8 @@ data/videos/
 data/video_info/
 data/report_*.md
 data/report_*.json
-data/*.db
 data/*.db-journal
+data/pw_user_data/
 
 # IDE
 .vscode/
@@ -48,4 +48,6 @@ Thumbs.db
 
 # 敏感文件
 credentials.json
+credentials_sheets.json
 token.json
+credentials_sheet.json

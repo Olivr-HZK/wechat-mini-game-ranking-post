@@ -39,3 +39,9 @@ API_RETRY_DELAY=2.0
 GOOGLE_SHEET_ID=your_google_sheet_id_here
 GOOGLE_SHEETS_CREDENTIALS=path/to/your/sheets_credentials.json
 # GOOGLE_SHEETS_TOKEN=path/to/token_sheets.json
+
+# RapidAPI 配置（用于 YouTube 搜索）
+RAPIDAPI_KEY=your_rapidapi_key_here
+
+# SensorTower API 配置（用于榜单异动分析）
+SENSORTOWER_API_TOKEN=your_sensortower_api_token_here
