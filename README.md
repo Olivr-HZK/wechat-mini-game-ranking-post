@@ -26,7 +26,7 @@ playwright install chromium  # 安装浏览器内核，用于爬取周榜
 python main.py
 ```
 
-5. 若只想按周爬取引力引擎周榜并写入数据库，可使用每周脚本（周一早上运行效果最佳）：
+5. 若只想按周爬取引力引擎榜单并写入数据库，可使用每周脚本（周一早上运行效果最佳）。脚本会爬取 **微信 + 抖音 × 人气榜 / 畅销榜 / 畅玩榜**（各含完整榜与异动榜 CSV，见 `data/人气榜/`、`data/畅销榜/`、`data/畅玩榜/`），再导入 SQLite 表 `top20_ranking`、`rank_changes`（`platform_key`=`wx`/`dy`，`chart_key` 区分榜单；详见 `scripts/schedule/README.md`）。
 
 ```bash
 ./scripts/weekly_scrape_and_import.sh               # 使用当天作为参考日期
@@ -50,6 +50,7 @@ python main.py
    - 使用SQLite数据库存储视频信息
    - 支持视频信息查询和统计
    - 自动记录搜索关键词和下载状态
+   - 周榜入库：`top20_ranking`、`rank_changes` 使用 `platform_key`（`wx`/`dy`）与 `chart_key`（如 `popularity`、`bestseller`、`casual_play`、`new_games`）区分同一周下多榜单；启动时会自动迁移旧库中 `wx_popularity` 这类复合键
 
 4. **视频分析模块** (`modules/video_analyzer.py`)
    - 使用OpenRouter API调用多模态模型分析视频
@@ -173,9 +174,15 @@ python scripts/tools/search_videos.py --help
 
 ### 排行榜数据
 
-排行榜数据存储在 `data/人气榜/` 目录下，支持两种平台：
-- **抖音小游戏**：文件名以 `dy_` 开头（如 `dy_2026-1-19~2026-1-25.csv`）
-- **微信小游戏**：普通文件名（如 `2026-1-19~2026-1-25.csv`）
+引力引擎周榜 CSV 按榜单类型分目录，同一周区间在三个目录下各有一份「微信 + 抖音」共 4 个文件（`*_full.csv`、`*_anomalies.csv`）：
+
+- `data/人气榜/{周范围}/` — 人气榜
+- `data/畅销榜/{周范围}/` — 畅销榜
+- `data/畅玩榜/{周范围}/` — 微信侧为畅玩榜；抖音侧页面为新游榜，CSV「榜单」列与产品文案一致
+
+周范围目录名格式：`YYYY-MM-DD~YYYY-MM-DD`（月日补零）。文件名前缀：`wx_` / `dy_`。
+
+（历史/其他流程中的旧格式）仍可能见到仅放在 `data/人气榜/` 下、以 `dy_` 或日期命名的 CSV；新流水线以子目录 + `wx_full.csv` 等为准。
 
 CSV文件格式包含以下字段：
 - 排名
@@ -276,11 +283,11 @@ python main.py --step 3
 │   └── ...
 │
 └── data/                      # 数据目录
-    ├── 人气榜/                 # 排行榜CSV文件
-    │   ├── dy_*.csv           # 抖音小游戏榜单
-    │   └── *.csv              # 微信小游戏榜单
+    ├── 人气榜/                 # 引力周榜 CSV（人气），子目录为周范围
+    ├── 畅销榜/                 # 引力周榜 CSV（畅销）
+    ├── 畅玩榜/                 # 引力周榜 CSV（微信畅玩 / 抖音新游）
     ├── videos/                # 视频文件目录
-    ├── videos.db              # SQLite数据库
+    ├── wechatdouyin.db        # 主 SQLite（视频信息与周榜 top20_ranking、rank_changes 等）
     └── step*_*.json           # 工作流中间产物
 ```
 
@@ -289,15 +296,20 @@ python main.py --step 3
 ### 爬取排行榜
 
 ```bash
-# 爬取周榜（默认微信小游戏）
-python scripts/scrapers/scrape_weekly_popularity.py
+# 爬取周榜：默认仅人气榜；与 weekly 脚本一致需三榜齐爬
+python scripts/scrapers/scrape_weekly_popularity.py --chart all --platform all
 
-# 爬取抖音小游戏周榜
-python scripts/scrapers/scrape_weekly_popularity.py --platform douyin
+# 只爬抖音 + 畅销榜示例
+python scripts/scrapers/scrape_weekly_popularity.py --chart bestseller --platform douyin
 
-# 爬取引力引擎排行榜
+# 将某周 CSV 导入数据库（不传参则自动选最新一周）
+python scripts/tools/import_ranking_csv_to_tables.py
+
+# 爬取引力引擎排行榜（其他脚本）
 python scripts/scrapers/scrape_gravity.py
 ```
+
+环境变量 **`CHROME_EXECUTABLE_PATH`**（可选）：若本机未通过 `playwright install` 安装 Chromium，可将该变量指向本机 Chrome 可执行文件，供 `modules/GravityScraper.py` 兜底启动浏览器（仍以 `playwright install chromium` 为推荐方式）。
 
 ### 测试功能
 
@@ -346,7 +358,7 @@ python scripts/utils/delete_game_data.py "游戏名称"
    - 统一按点赞量排序
    - 选择点赞量最高的那一条作为该游戏的玩法视频
    - 只搜索1分钟以内的视频
-3. **数据库存储**：搜索结果自动保存到SQLite数据库 `data/videos.db`，视频文件保存在 `data/videos/` 目录
+3. **数据库存储**：搜索结果自动保存到 SQLite 数据库 `data/wechatdouyin.db`（`VideoDatabase` 默认路径），视频文件保存在 `data/videos/` 目录
 4. **下载方式（简化逻辑）**：
    - **方式1**：优先使用免费的video_url直接下载（默认方式）
    - **方式2**：如果普通URL下载失败，且配置了 `USE_HIGH_QUALITY_API_FALLBACK=true`，自动使用付费的最高画质API（0.005$一次）
@@ -360,7 +372,7 @@ python scripts/utils/delete_game_data.py "游戏名称"
 
 ### 数据库存储
 
-搜索到的视频信息会自动保存到SQLite数据库 `data/videos.db` 中，包含以下信息：
+搜索到的视频信息会自动保存到 SQLite 数据库 `data/wechatdouyin.db` 中，包含以下信息：
 - 视频ID (`aweme_id`)
 - 视频URL (`video_url` 和 `video_urls`)
 - 游戏名称、标题、描述

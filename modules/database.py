@@ -195,12 +195,14 @@ class VideoDatabase:
             ON weekly_report_simple(week_range, platform)
         ''')
         
-        # top20_ranking：每周 full 榜（11 列与 CSV 一一对应）
+        # top20_ranking：每周 full 榜（CSV 11 列 + 元数据）
+        # platform_key：wx / dy；chart_key：popularity / bestseller / casual_play（与目录、爬虫一致）
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS top20_ranking (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 week_range TEXT NOT NULL,
                 platform_key TEXT NOT NULL,
+                chart_key TEXT NOT NULL DEFAULT '',
                 rank TEXT,
                 game_name TEXT,
                 game_type TEXT,
@@ -220,12 +222,13 @@ class VideoDatabase:
             ON top20_ranking(week_range, platform_key)
         ''')
         
-        # rank_changes：每周异动榜（11 列与 CSV 一一对应）
+        # rank_changes：每周异动榜
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS rank_changes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 week_range TEXT NOT NULL,
                 platform_key TEXT NOT NULL,
+                chart_key TEXT NOT NULL DEFAULT '',
                 rank TEXT,
                 game_name TEXT,
                 game_type TEXT,
@@ -244,9 +247,71 @@ class VideoDatabase:
             CREATE INDEX IF NOT EXISTS idx_rank_changes_week_platform
             ON rank_changes(week_range, platform_key)
         ''')
+
+        self._ensure_ranking_chart_key_schema(cursor)
         
         conn.commit()
         conn.close()
+
+    def _ensure_ranking_chart_key_schema(self, cursor) -> None:
+        """
+        为 top20_ranking / rank_changes 增加 chart_key，并把旧版复合 platform_key（如 wx_popularity）
+        拆成 platform_key=wx、chart_key=popularity。唯一键语义：(week_range, platform_key, chart_key)。
+        """
+        for table in ("top20_ranking", "rank_changes"):
+            cursor.execute(f"PRAGMA table_info({table})")
+            col_names = [r[1] for r in cursor.fetchall()]
+            if not col_names:
+                continue
+            if "chart_key" not in col_names:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN chart_key TEXT NOT NULL DEFAULT ''")
+            # 拆分 wx_xxx / dy_xxx（含 casual_play）
+            cursor.execute(
+                f"""
+                UPDATE {table} SET chart_key = substr(platform_key, 4)
+                WHERE platform_key GLOB 'wx_*' AND LENGTH(platform_key) > 3
+                """
+            )
+            cursor.execute(
+                f"""
+                UPDATE {table} SET platform_key = 'wx'
+                WHERE platform_key GLOB 'wx_*' AND LENGTH(platform_key) > 3
+                """
+            )
+            cursor.execute(
+                f"""
+                UPDATE {table} SET chart_key = substr(platform_key, 4)
+                WHERE platform_key GLOB 'dy_*' AND LENGTH(platform_key) > 3
+                """
+            )
+            cursor.execute(
+                f"""
+                UPDATE {table} SET platform_key = 'dy'
+                WHERE platform_key GLOB 'dy_*' AND LENGTH(platform_key) > 3
+                """
+            )
+        cursor.execute("DROP INDEX IF EXISTS idx_top20_week_platform")
+        cursor.execute("DROP INDEX IF EXISTS idx_rank_changes_week_platform")
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_top20_week_platform_chart
+            ON top20_ranking(week_range, platform_key, chart_key)
+            """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_rank_changes_week_platform_chart
+            ON rank_changes(week_range, platform_key, chart_key)
+            """
+        )
+        # 抖音第三榜与微信畅玩榜区分：dy + casual_play（旧）→ new_games（新游榜）
+        for table in ("top20_ranking", "rank_changes"):
+            cursor.execute(
+                f"""
+                UPDATE {table} SET chart_key = 'new_games'
+                WHERE platform_key = 'dy' AND chart_key = 'casual_play'
+                """
+            )
     
     def _migrate_table_column_order(self, cursor):
         """
@@ -1378,22 +1443,23 @@ class VideoDatabase:
         ("地区", "region"),
     ]
 
-    def _row_to_ranking_tuple(self, row: Dict, week_range: str, platform_key: str) -> tuple:
+    def _row_to_ranking_tuple(self, row: Dict, week_range: str, platform_key: str, chart_key: str) -> tuple:
         """将 CSV 行（中文 key 或英文 key）转为 top20_ranking/rank_changes 的插入元组。"""
-        out = [week_range, platform_key]
+        out = [week_range, platform_key, chart_key]
         for cn, en in self._RANKING_CSV_COLUMNS:
             val = row.get(cn) or row.get(en) or ""
             out.append(val if isinstance(val, str) else str(val))
         return tuple(out)
 
-    def insert_top20_ranking(self, week_range: str, platform_key: str, rows: List[Dict]) -> int:
+    def insert_top20_ranking(self, week_range: str, platform_key: str, chart_key: str, rows: List[Dict]) -> int:
         """
-        将每周 full 榜写入 top20_ranking 表。11 列与 CSV 一一对应。
-        同一 (week_range, platform_key) 会先删后插，避免重复（覆盖该周该平台旧数据）。
+        将每周 full 榜写入 top20_ranking 表。CSV 11 列 + 元数据。
+        同一 (week_range, platform_key, chart_key) 会先删后插。
 
         Args:
             week_range: 周范围，如 2026-02-02~2026-02-08
             platform_key: wx 或 dy
+            chart_key: popularity / bestseller / casual_play（微信畅玩）/ new_games（抖音新游）
             rows: 列表，每项为 dict，含 11 个字段（中文或英文字段名均可）
 
         Returns:
@@ -1405,13 +1471,13 @@ class VideoDatabase:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute(
-                "DELETE FROM top20_ranking WHERE week_range = ? AND platform_key = ?",
-                (week_range, platform_key),
+                "DELETE FROM top20_ranking WHERE week_range = ? AND platform_key = ? AND chart_key = ?",
+                (week_range, platform_key, chart_key),
             )
-            cols = ["week_range", "platform_key"] + [en for _, en in self._RANKING_CSV_COLUMNS]
+            cols = ["week_range", "platform_key", "chart_key"] + [en for _, en in self._RANKING_CSV_COLUMNS]
             placeholders = ",".join(["?"] * len(cols))
             sql = f"INSERT INTO top20_ranking ({', '.join(cols)}) VALUES ({placeholders})"
-            tuples = [self._row_to_ranking_tuple(r, week_range, platform_key) for r in rows]
+            tuples = [self._row_to_ranking_tuple(r, week_range, platform_key, chart_key) for r in rows]
             cursor.executemany(sql, tuples)
             conn.commit()
             n = cursor.rowcount
@@ -1421,14 +1487,15 @@ class VideoDatabase:
             print(f"批量插入 top20_ranking 时出错：{str(e)}")
             return 0
 
-    def insert_rank_changes(self, week_range: str, platform_key: str, rows: List[Dict]) -> int:
+    def insert_rank_changes(self, week_range: str, platform_key: str, chart_key: str, rows: List[Dict]) -> int:
         """
-        将每周异动榜写入 rank_changes 表。11 列与 CSV 一一对应。
-        同一 (week_range, platform_key) 会先删后插，避免重复（覆盖该周该平台旧数据）。
+        将每周异动榜写入 rank_changes 表。CSV 11 列 + 元数据。
+        同一 (week_range, platform_key, chart_key) 会先删后插。
 
         Args:
             week_range: 周范围，如 2026-02-02~2026-02-08
             platform_key: wx 或 dy
+            chart_key: popularity / bestseller / casual_play（微信畅玩）/ new_games（抖音新游）
             rows: 列表，每项为 dict，含 11 个字段（中文或英文字段名均可）
 
         Returns:
@@ -1440,13 +1507,13 @@ class VideoDatabase:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             cursor.execute(
-                "DELETE FROM rank_changes WHERE week_range = ? AND platform_key = ?",
-                (week_range, platform_key),
+                "DELETE FROM rank_changes WHERE week_range = ? AND platform_key = ? AND chart_key = ?",
+                (week_range, platform_key, chart_key),
             )
-            cols = ["week_range", "platform_key"] + [en for _, en in self._RANKING_CSV_COLUMNS]
+            cols = ["week_range", "platform_key", "chart_key"] + [en for _, en in self._RANKING_CSV_COLUMNS]
             placeholders = ",".join(["?"] * len(cols))
             sql = f"INSERT INTO rank_changes ({', '.join(cols)}) VALUES ({placeholders})"
-            tuples = [self._row_to_ranking_tuple(r, week_range, platform_key) for r in rows]
+            tuples = [self._row_to_ranking_tuple(r, week_range, platform_key, chart_key) for r in rows]
             cursor.executemany(sql, tuples)
             conn.commit()
             n = cursor.rowcount

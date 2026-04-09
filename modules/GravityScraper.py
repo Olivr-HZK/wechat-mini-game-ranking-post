@@ -304,14 +304,20 @@ def scrape(headless: bool = False, debug: bool = False):
     output_path = output_dir / OUTPUT_FILENAME
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=headless,
-            args=[
+        # 兜底：如果 Playwright 下载的 chromium 不存在，可以通过环境变量让它使用本机 Chrome。
+        # 仅用于“能跑起来”调试；生产仍建议 `playwright install` 正常安装浏览器。
+        chrome_executable_path = os.environ.get("CHROME_EXECUTABLE_PATH", "").strip() or None
+        launch_kwargs = {
+            "headless": headless,
+            "args": [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
             ],
-        )
+        }
+        if chrome_executable_path:
+            launch_kwargs["executable_path"] = chrome_executable_path
+        browser = p.chromium.launch(**launch_kwargs)
         context = browser.new_context(
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -413,10 +419,15 @@ def scrape(headless: bool = False, debug: bool = False):
         
         # 滚动页面以确保懒加载内容被加载
         print("[*] 滚动页面以加载所有内容...")
-        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        time.sleep(1)
-        page.evaluate("window.scrollTo(0, 0)")
-        time.sleep(1)
+        try:
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            time.sleep(1)
+            page.evaluate("window.scrollTo(0, 0)")
+            time.sleep(1)
+        except Exception as e:
+            # 某些情况下页面/会话在滚动时会提前关闭（例如网络/登录/反爬导致的中断）
+            # 此时至少保留截图/HTML/解析的机会。
+            print(f"[!] 滚动失败，继续执行后续逻辑：{repr(e)}")
         
         # 调试模式：保存页面截图和HTML
         if debug:

@@ -1,3 +1,5 @@
+# Python 3.10+ 推荐（与当前虚拟环境一致即可）
+
 # HTTP 请求库
 requests>=2.31.0
 requests-toolbelt>=1.0.0
@@ -20,5 +22,6 @@ google-api-python-client>=2.0.0
 google-auth-httplib2>=0.1.0
 google-auth-oauthlib>=1.0.0
 
-# 浏览器自动化（爬虫）
+# 浏览器自动化（引力引擎周榜 scrape_weekly_popularity、GravityScraper 等）
+# 安装后需执行：playwright install chromium
 playwright>=1.40.0

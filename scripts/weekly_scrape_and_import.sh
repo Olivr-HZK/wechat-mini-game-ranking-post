@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 每周执行：爬取上一周榜单（引力引擎 wx/dy 四份 CSV）并导入数据库（top20_ranking、rank_changes）。
+# 每周执行：爬取上一周「两平台 × 三榜」共 6 组 CSV（人气/畅销/畅玩 × wx/dy）并导入数据库。
 # 建议在每周一早上运行，此时“今天”对应的上一周即为刚结束的周一到周日。
 #
 # 用法：
@@ -38,13 +38,13 @@ echo "项目目录: $PROJECT_ROOT"
 echo "监控日期: ${MONITOR_DATE:-（默认今天，上一周）}"
 echo "============================================================"
 
-# ---------- 1. 爬虫：上一周 wx/dy 完整榜 + 异动榜（4 个 CSV） ----------
+# ---------- 1. 爬虫：两平台 × 人气/畅销/畅玩（各 full + 异动） ----------
 echo ""
-echo "[1/2] 爬取引力引擎 - 微信/抖音 完整榜 + 异动榜"
+echo "[1/2] 爬取引力引擎 - 微信/抖音 × 人气榜/畅销榜/畅玩榜"
 if [ -n "$MONITOR_DATE" ]; then
-    python scripts/scrapers/scrape_weekly_popularity.py --platform all --monitor-date "$MONITOR_DATE" || exit 1
+    python scripts/scrapers/scrape_weekly_popularity.py --chart all --platform all --monitor-date "$MONITOR_DATE" || exit 1
 else
-    python scripts/scrapers/scrape_weekly_popularity.py --platform all || exit 1
+    python scripts/scrapers/scrape_weekly_popularity.py --chart all --platform all || exit 1
 fi
 
 # ---------- 2. 入库：将刚生成的 CSV 导入 top20_ranking、rank_changes ----------

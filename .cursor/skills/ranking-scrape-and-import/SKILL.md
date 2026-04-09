@@ -15,8 +15,8 @@ description: Encapsulates the gravity-engine ranking crawler and DB import workf
 
 **脚本**: `scripts/weekly_scrape_and_import.sh`
 
-- 步骤 1：爬取上一周 wx/dy 四份 CSV（完整榜 + 异动榜）到 `data/人气榜/{周范围}/`
-- 步骤 2：将**最新一周目录**下的 4 个 CSV 导入数据库表 `top20_ranking`、`rank_changes`（同周同平台先删后插，覆盖）
+- 步骤 1：爬取上一周 wx/dy × 人气/畅销/畅玩（`--chart all`），CSV 分别写入 `data/人气榜|畅销榜|畅玩榜/{周范围}/`
+- 步骤 2：将同一周三个目录下的 CSV 导入 `top20_ranking`、`rank_changes`（`platform_key` 为 `wx`/`dy`，`chart_key` 区分人气/畅销/畅玩；抖音「畅玩」目录对应新游榜，入库为 `chart_key=new_games`；同一 `(week_range, platform_key, chart_key)` 先删后插）
 
 **运行**（项目根目录）:
 ```bash
@@ -34,8 +34,9 @@ description: Encapsulates the gravity-engine ranking crawler and DB import workf
 **脚本**: `scripts/scrapers/scrape_weekly_popularity.py`  
 **目标**: https://web.gravity-engine.com/#/manage/rank （需登录）
 
-- 输出目录: `data/人气榜/{周范围}/`，周范围格式 `YYYY-MM-DD~YYYY-MM-DD`（月日补零）
-- 输出文件: `wx_full.csv`, `wx_anomalies.csv`, `dy_full.csv`, `dy_anomalies.csv`
+- 输出目录: `data/人气榜|畅销榜|畅玩榜/{周范围}/`，周范围格式 `YYYY-MM-DD~YYYY-MM-DD`（月日补零）
+- 输出文件: 各目录 `wx_full.csv`, `wx_anomalies.csv`, `dy_full.csv`, `dy_anomalies.csv`
+- 抖音侧「榜单」列：人气→热门周榜、畅玩→新游周榜（与产品文案一致）
 - 异动规则: **新进榜** 或 **上升>10** 或 **下降>10**（阈值 `--rank-surge-threshold`，默认 10）
 - 排名变化: 从页面标签 + SVG 图标识别方向，写入 `↑N` / `↓N` / `新进榜`
 
@@ -54,8 +55,8 @@ python scripts/scrapers/scrape_weekly_popularity.py --platform douyin --limit 50
 
 **脚本**: `scripts/tools/import_ranking_csv_to_tables.py`
 
-- 从指定周目录读取 4 个 CSV，写入 `top20_ranking`（full）、`rank_changes`（anomalies）
-- 同一 `(week_range, platform_key)` 会**先 DELETE 再 INSERT**，避免重复
+- 从 `data/人气榜|畅销榜|畅玩榜/{同一周范围}/` 读取各 4 个 CSV，写入 `top20_ranking`（full）、`rank_changes`（anomalies）
+- 表字段 **`platform_key`**（`wx`/`dy`）与 **`chart_key`**（`popularity`/`bestseller`/`casual_play`/`new_games`）分列存储；微信第三榜为 `casual_play`（畅玩），抖音第三榜为 `new_games`（新游）；同一 `(week_range, platform_key, chart_key)` **先 DELETE 再 INSERT**
 - CSV 11 列与表字段一一对应（排名、游戏名称、游戏类型、平台、来源、榜单、监控日期、发布时间、开发公司、排名变化、地区）
 
 **运行**:
@@ -71,7 +72,7 @@ python scripts/tools/import_ranking_csv_to_tables.py --week-dir "data/人气榜/
 
 ## 数据库表
 
-- **top20_ranking**: 每周 full 榜（wx/dy），字段含 `week_range`, `platform_key`, `rank`, `game_name`, ..., `rank_change`, `region`
+- **top20_ranking**: 每周 full 榜，字段含 `week_range`, `platform_key`（wx/dy）, `chart_key`（榜单类型）, `rank`, `game_name`, …, `board_name`（CSV「榜单」长名称）, `rank_change`, `region`
 - **rank_changes**: 每周异动榜，字段同上；`rank_change` 存原文（含 `↑`/`↓`）
 
 表结构在 `modules/database.py` 的 `_init_database` 中创建；插入逻辑在同一文件的 `insert_top20_ranking`、`insert_rank_changes`，内含「先删后插」避免重复。
