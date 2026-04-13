@@ -296,8 +296,8 @@ python main.py --step 3
 ### 爬取排行榜
 
 ```bash
-# 爬取周榜：默认仅人气榜；与 weekly 脚本一致需三榜齐爬
-python scripts/scrapers/scrape_weekly_popularity.py --chart all --platform all
+# 爬取周榜：默认仅人气榜；与 weekly 脚本一致需人气+畅销齐爬（--chart both）
+python scripts/scrapers/scrape_weekly_popularity.py --chart both --platform all
 
 # 只爬抖音 + 畅销榜示例
 python scripts/scrapers/scrape_weekly_popularity.py --chart bestseller --platform douyin

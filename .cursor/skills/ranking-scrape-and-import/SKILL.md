@@ -15,17 +15,20 @@ description: Encapsulates the gravity-engine ranking crawler and DB import workf
 
 **脚本**: `scripts/weekly_scrape_and_import.sh`
 
-- 步骤 1：爬取上一周 wx/dy × 人气/畅销/畅玩（`--chart all`），CSV 分别写入 `data/人气榜|畅销榜|畅玩榜/{周范围}/`
+- 步骤 1：爬取上一周 wx/dy × 人气+畅销（`scrape_weekly_popularity.py --chart both --platform all`；脚本仅支持 `most_played`/`bestseller`/`both`，无 `all`、无畅玩），CSV 写入 `data/人气榜|畅销榜/{周范围}/`
 - 步骤 2：将同一周三个目录下的 CSV 导入 `top20_ranking`、`rank_changes`（`platform_key` 为 `wx`/`dy`，`chart_key` 区分人气/畅销/畅玩；抖音「畅玩」目录对应新游榜，入库为 `chart_key=new_games`；同一 `(week_range, platform_key, chart_key)` 先删后插）
+- 步骤 3：运行 `scripts/senders/send_wechat_douyin_weekly_push.py`，从 `data/wechatdouyin.db` 推送微信/抖音小游戏周报到飞书/企微（依赖项目根 `.env` Webhook）。若只要爬取+入库：设置 `SKIP_WEEKLY_PUSH=1`。
 
 **运行**（项目根目录）:
 ```bash
 ./scripts/weekly_scrape_and_import.sh
 # 或指定监控日期
 ./scripts/weekly_scrape_and_import.sh 2026-02-24
+# 只爬取+入库，不推送
+SKIP_WEEKLY_PUSH=1 ./scripts/weekly_scrape_and_import.sh
 ```
 
-**依赖**: 需在项目根执行；若有 `.venv`/`venv`/`env`，脚本会先激活再跑 Python。
+**依赖**: 需在项目根执行；若有 `.venv`/`venv`/`env`，脚本会先激活再跑 Python。推送步骤需配置 `.env`（如 `FEISHU_WEBHOOK_URL`、`WECOM_WEBHOOK_URL`）。
 
 ---
 

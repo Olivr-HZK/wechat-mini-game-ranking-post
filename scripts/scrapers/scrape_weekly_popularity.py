@@ -8,11 +8,9 @@
 每次运行输出四个榜单（当 --platform all 时）或两个榜单（单平台时）：
 - 完整休闲榜：wx_full.csv（微信休闲完整）、dy_full.csv（抖音周榜完整）
 - 异动榜：wx_anomalies.csv、dy_anomalies.csv（排名飙升>10 或 新进榜）
-- 榜单类型由 --chart 控制（均在对应区块内点「周榜」）：
-  - popularity：人气榜（DOM 含 popularity）
-  - bestseller：畅销榜（DOM 含 bestseller）
-  - casual_play：畅玩榜（DOM 含 most_played，与接口 rank_type 一致）
-- 输出目录：`data/人气榜/`、`data/畅销榜/`、`data/畅玩榜/` 下各接 `{周范围}/`，文件名均为 wx_full、dy_full 等
+- 榜单类型由 --chart 控制：most_played=人气榜区块，bestseller=畅销榜区块（均点对应区块内的「周榜」）
+- 人气榜 CSV：`data/人气榜/{周范围}/`（wx_full、dy_full 等）
+- 畅销榜 CSV：`data/畅销榜/{周范围}/`（同名文件，目录区分）
 
 统一 CSV 格式（11 列）：
 排名,游戏名称,游戏类型,平台,来源,榜单,监控日期,发布时间,开发公司,排名变化,地区
@@ -22,8 +20,7 @@
   python scrape_weekly_popularity.py --platform wechat
   python scrape_weekly_popularity.py --platform douyin --monitor-date 2026-01-19
   python scrape_weekly_popularity.py --chart bestseller --platform douyin --limit 30
-  python scrape_weekly_popularity.py --chart both --platform douyin   # 人气+畅销
-  python scrape_weekly_popularity.py --chart all --platform all       # 人气+畅销+畅玩
+  python scrape_weekly_popularity.py --chart both --platform douyin   # 人气+畅销都爬并打印预览
 """
 
 from __future__ import annotations
@@ -330,19 +327,14 @@ def filter_anomalies_only(
 
 
 def _chart_section_class(chart: str) -> str:
-    """
-    页面 rank-list-item-header 上的区块 class（与引力页面一致）。
-    畅玩榜在 DOM 上为 most_played；人气榜为 popularity（勿与畅玩混淆）。
-    """
+    """页面区块 class：人气榜 most_played，畅销榜 bestseller。"""
     if chart == "bestseller":
         return "bestseller"
-    if chart == "casual_play":
-        return "most_played"
-    return "popularity"
+    return "most_played"
 
 
 def _week_button_locator(page, section_class: str):
-    """在指定榜单区块（header 含 popularity / bestseller / most_played）内点击「周榜」。"""
+    """在指定榜单区块（header 含 most_played / bestseller）内点击「周榜」。"""
     # 使用 contains(@class) 与页面实际 class 列表一致（避免 CSS 多类名在部分环境下匹配不到）
     return page.locator(
         f"xpath=//div[contains(@class,'rank-list-item-header') and contains(@class,'{section_class}')]"
@@ -353,7 +345,7 @@ def _week_button_locator(page, section_class: str):
 def _week_button_locator_by_column_index(page, col_index: int):
     """
     按「第几个榜单头」取周榜按钮（0=左/第一块，1=右/第二块）。
-    部分平台（如抖音）人气列可能不带 popularity class，需按列索引回退。
+    部分平台（如抖音）第二块人气榜可能不带 most_played class，需与 _chart_section_class 搭配回退。
     """
     # XPath 下标从 1 开始
     n = col_index + 1
@@ -444,33 +436,23 @@ def _dismiss_overlays(page) -> None:
             continue
 
 
-def _chart_label_cn(chart: str, platform: str) -> str:
-    """控制台短标签；抖音侧人气/畅玩与微信产品名不同（热门榜、新游榜）。"""
-    if platform == "douyin":
-        if chart == "popularity":
-            return "热门榜"
-        if chart == "casual_play":
-            return "新游榜"
-    return {"bestseller": "畅销榜", "casual_play": "畅玩榜", "popularity": "人气榜"}.get(chart, "人气榜")
-
-
 def scrape_one_platform(
     page,
     platform: str,
     limit: int,
-    chart: str = "popularity",
+    chart: str = "most_played",
 ) -> List[WeeklyItem]:
     """
     在当前页面上抓取一个平台的周榜（微信=休闲周榜，抖音=抖音小游戏周榜）。
     - platform "wechat" 时会先切到微信小游戏 tab（与抖音对称，避免默认停在抖音榜）。
     - platform "douyin" 时会先点击抖音 tab 再点周榜。
-    - chart：popularity=人气，bestseller=畅销，casual_play=畅玩（DOM 为 most_played）。
+    - chart：most_played=人气榜区块内点「周榜」，bestseller=畅销榜区块内点「周榜」。
     - limit 为 0 表示不限制条数；否则最多抓取 limit 条。
     返回解析后的 WeeklyItem 列表。
     """
     _dismiss_overlays(page)
     section_class = _chart_section_class(chart)
-    chart_label = _chart_label_cn(chart, platform)
+    chart_label = "畅销榜" if chart == "bestseller" else "人气榜"
 
     # 微信：显式切到微信小游戏 tab（资源名含 wx_tab_rank，如 wx_tab_rank_select-xxx.png）
     if platform == "wechat":
@@ -521,9 +503,9 @@ def scrape_one_platform(
     try:
         week_btn.wait_for(state="visible", timeout=60000)
     except Exception as e1:
-        # 人气：抖音等可能不带 popularity class，用第 2 个榜单头
-        if chart == "popularity":
-            print("[*] 未找到带 popularity 的区块，尝试第 2 个榜单头内的「周榜」（人气列）…")
+        # 抖音等页面右侧「人气」列可能不带 most_played class，按第 2 个榜单头回退
+        if chart == "most_played":
+            print("[*] 未找到带 most_played 的区块，尝试第 2 个榜单头内的「周榜」（右侧人气列）…")
             week_btn = _week_button_locator_by_column_index(page, 1)
 
             def _rank_scope_fb():
@@ -538,24 +520,6 @@ def scrape_one_platform(
                 week_btn.wait_for(state="visible", timeout=60000)
             except Exception as e2:
                 print(f"[!] 仍无法定位人气榜「周榜」按钮：{e2}")
-                return []
-        elif chart == "casual_play":
-            # 畅玩：DOM 为 most_played；若无则尝试第 3 个榜单头（三榜并排时）
-            print("[*] 未找到带 most_played 的畅玩区块，尝试第 3 个榜单头内的「周榜」…")
-            week_btn = _week_button_locator_by_column_index(page, 2)
-
-            def _rank_scope_c():
-                return _rank_items_locator_by_column_index(page, 2)
-
-            rank_scope = _rank_scope_c
-            try:
-                week_btn.scroll_into_view_if_needed(timeout=10000)
-            except Exception:
-                pass
-            try:
-                week_btn.wait_for(state="visible", timeout=60000)
-            except Exception as e2:
-                print(f"[!] 仍无法定位畅玩榜「周榜」按钮：{e2}")
                 return []
         else:
             print(f"[!] 未找到「{chart_label}」区块内的「周榜」按钮：{e1}")
@@ -724,19 +688,13 @@ def write_csv(
 
 
 def _board_names_for(platform: str, chart: str) -> Tuple[str, str]:
-    """返回 (完整榜名称, 异动榜名称)。抖音侧：人气→热门榜、畅玩→新游榜（与产品文案一致）。"""
+    """返回 (完整榜名称, 异动榜名称)。"""
     if platform == "douyin":
         if chart == "bestseller":
             return ("抖音小游戏畅销周榜", "抖音小游戏畅销周榜异动")
-        if chart == "casual_play":
-            return ("抖音小游戏新游周榜", "抖音小游戏新游周榜异动")
-        if chart == "popularity":
-            return ("抖音小游戏热门周榜", "抖音小游戏热门周榜异动")
-        return ("抖音小游戏热门周榜", "抖音小游戏热门周榜异动")
+        return ("抖音小游戏周榜", "抖音小游戏周榜异动")
     if chart == "bestseller":
         return ("微信小游戏畅销周榜（休闲完整）", "微信小游戏畅销周榜异动")
-    if chart == "casual_play":
-        return ("微信小游戏畅玩周榜（休闲完整）", "微信小游戏畅玩周榜异动")
     return ("微信小游戏人气周榜（休闲完整）", "微信小游戏人气周榜异动")
 
 
@@ -746,20 +704,14 @@ def _csv_base_prefix(platform: str) -> str:
 
 
 def _week_output_dir(chart: str, week_range: str) -> Path:
-    """人气 / 畅销 / 畅玩 各自子目录。"""
-    root = {
-        "bestseller": "畅销榜",
-        "casual_play": "畅玩榜",
-        "popularity": "人气榜",
-    }.get(chart, "人气榜")
+    """人气榜 -> data/人气榜/{周范围}；畅销榜 -> data/畅销榜/{周范围}。"""
+    root = "畅销榜" if chart == "bestseller" else "人气榜"
     return Path("data") / root / week_range
 
 
 def _charts_from_arg(chart_arg: str) -> List[str]:
     if chart_arg == "both":
-        return ["popularity", "bestseller"]
-    if chart_arg == "all":
-        return ["popularity", "bestseller", "casual_play"]
+        return ["most_played", "bestseller"]
     return [chart_arg]
 
 
@@ -795,10 +747,9 @@ def main() -> int:
                     help="平台：wechat=仅微信，douyin=仅抖音，all=两个都要（默认 all）")
     ap.add_argument(
         "--chart",
-        choices=["popularity", "bestseller", "casual_play", "both", "all", "most_played"],
-        default="popularity",
-        help="popularity=人气，bestseller=畅销，casual_play=畅玩（DOM most_played）；"
-        "both=人气+畅销；all=人气+畅销+畅玩；most_played 弃用同 popularity",
+        choices=["most_played", "bestseller", "both"],
+        default="most_played",
+        help="榜单区块：most_played=人气，bestseller=畅销，both=两个都爬（默认 most_played）",
     )
     ap.add_argument(
         "--print-max-rows",
@@ -813,18 +764,14 @@ def main() -> int:
     )
     ap.add_argument("--rank-surge-threshold", type=int, default=10, help="异动判定：排名飙升阈值（默认10）")
     args = ap.parse_args()
-    chart_arg = args.chart
-    if chart_arg == "most_played":
-        print("[!] --chart most_played 已弃用，请改用 --chart popularity（人气榜）；本运行按 popularity 处理。")
-        chart_arg = "popularity"
 
     ref = _parse_ymd(args.monitor_date) or datetime.now().date()
     prev_monday, prev_sunday = _prev_week_range(ref)
     week_range = _week_range_str(prev_monday, prev_sunday)
     monitor_date = (args.monitor_date.strip() or datetime.now().strftime("%Y-%m-%d"))
 
-    charts = _charts_from_arg(chart_arg)
-    # 仅创建本次运行会写入的子目录
+    charts = _charts_from_arg(args.chart)
+    # 仅创建本次运行会写入的子目录（人气 / 畅销 可能各一组）
     for ch in charts:
         _week_output_dir(ch, week_range).mkdir(parents=True, exist_ok=True)
 
@@ -858,7 +805,7 @@ def main() -> int:
                 week_dir = _week_output_dir(chart, week_range)
                 base_name = _csv_base_prefix(platform)
                 board_full, board_anomaly = _board_names_for(platform, chart)
-                chart_cn = _chart_label_cn(chart, platform)
+                chart_cn = "畅销榜" if chart == "bestseller" else "人气榜"
 
                 print(f"\n{'='*50}")
                 print(f"【{platform_cn} · {chart_cn}】→ {week_dir}")

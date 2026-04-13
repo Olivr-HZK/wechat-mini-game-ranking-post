@@ -312,6 +312,15 @@ class VideoDatabase:
                 WHERE platform_key = 'dy' AND chart_key = 'casual_play'
                 """
             )
+        # chart_key 为空：旧版仅按 wx/dy 入库，统一归为 popularity（微信=人气榜、抖音=热门榜，展示名见 board_name）
+        for table in ("top20_ranking", "rank_changes"):
+            cursor.execute(
+                f"""
+                UPDATE {table} SET chart_key = 'popularity'
+                WHERE platform_key IN ('wx', 'dy')
+                  AND (chart_key IS NULL OR TRIM(chart_key) = '')
+                """
+            )
     
     def _migrate_table_column_order(self, cursor):
         """
